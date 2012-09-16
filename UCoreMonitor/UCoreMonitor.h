@@ -109,7 +109,7 @@ namespace s2e{
       friend class UCoreMonitor;
     };// class UCoreMonitorState
 
-  }
-}
+  }// plugins
+}// s2e
 
 #endif
