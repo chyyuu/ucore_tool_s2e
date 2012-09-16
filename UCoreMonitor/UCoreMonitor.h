@@ -1,0 +1,115 @@
+#ifndef S2E_PLUGINS_UCOREMONITOR_H
+#define S2E_PLUGINS_UCOREMONITOR_H
+
+#include <s2e/Plugin.h>
+#include <s2e/Plugins/CorePlugin.h>
+#include <s2e/S2EExecutionState.h>
+
+#include <vector>
+#include <map>
+#include <set>
+#include <string>
+
+namespace s2e{
+  namespace plugins{
+
+    class UCoreUserModeEvent;
+    class UCoreKernelModeEvent;
+
+    class UCoreMonitor : public OSMonitor{
+
+      S2E_PLUGIN
+
+      public:
+
+      UCoreMonitor(S2E *s2e) :OSMonitor(s2e){}
+      void initialize();
+
+      typedef sigc::signal<void, S2EExecutionState*, std::string, uint64_t> TransitionSignal;
+      TransitionSignal onFunctionTransition;
+
+      void slotCall(S2EExecutionState* state, uint64_t pc);
+      void slotRet(S2EExecutionState* state, uint64_t pc);
+
+      void disconnect(S2EExecutionState *state){
+        return;
+      }
+
+    private:
+
+      uint64_t m_UCoreVersion;
+      bool m_UserMode, m_KernelMode;
+      bool m_MonitorThreads;
+      uint64_t m_KernelBase;
+      uint64_t m_KernelEnd;
+      bool anaysing_zone;
+      uint64_t m_CurrentFuncEntry;
+      std::vector<uint64_t> callStack;
+
+      //Symbol table
+      typedef struct __symbol_struct{
+        uint64_t addr;
+        char type;
+        std::string name;
+      } symbol_struct;
+      typedef std::map<uint64_t, symbol_struct> SymbolTable;
+      std::string system_map_file;
+      SymbolTable sTable;
+
+      //Kernel Addresses
+      static uint64_t s_KeInitThread;
+      static uint64_t s_KeTerminateThread;
+
+      //Signal connectors
+      void onTranslateInstruction(ExecutionSignal *signal,
+                                  S2EExecutionState *state,
+                                  TranslationBlock *tb,
+                                  uint64_t pc);
+      void onPageDirectoryChange(S2EExecutionState *state,
+                                 uint64_t previous,
+                                 uint64_t current);
+      void onTranslateBlockEnd(ExecutionSignal* signal, S2EExecutionState *state,
+                               TranslationBlock *tb, uint64_t pc,
+                               bool, uint64_t);
+      void onTBJumpStart (ExecutionSignal *signal, S2EExecutionState *state,
+                          TranslationBlock *tb, uint64_t, int jump_type);
+
+      //User Mode Events
+      // void slotMonitorProcessSwitch(S2EExecutionState *state,
+      //                               uint64_t pc);
+      // void slotUmCatchProcessTermination(S2EExecutionState *state,
+      //                                    uint64_t pc);
+
+      //Kernel Mode Events
+      void slotKmThreadInit(S2EExecutionState *state, uint64_t pc);
+      void slotKmThreadExit(S2EExecutionState *state, uint64_t pc);
+
+      // Meta functions starts here
+      void parseSystemMapFile();
+      void notifyLoadForAllThreads(S2EExecutionState* state);
+      uint64_t GetKernelStart() const;
+      uint64_t GetKeInitThread() const;
+      uint64_t GetKeTerminateThread() const;
+      bool getThreadDescriptor(S2EExecutionState* state,
+                               uint64_t pThread,
+                               ThreadDescriptor threadDescriptor);
+      uint64_t getCurrentThread(S2EExecutionState *state);
+    };// class UCoreMonitor
+
+    class UCoreMonitorState: public PluginState{
+    private:
+      uint64_t m_CurrentPid;
+
+    public:
+      UCoreMonitorState();
+      virtual ~UCoreMonitorState();
+      virtual UCoreMonitorState* clone() const;
+      static PluginState *factory(Plugin *p, S2EExecutionState *state);
+
+      friend class UCoreMonitor;
+    };// class UCoreMonitorState
+
+  }
+}
+
+#endif
