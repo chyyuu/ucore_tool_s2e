@@ -1,10 +1,13 @@
 #ifndef S2E_PLUGINS_UCOREMONITOR_H
 #define S2E_PLUGINS_UCOREMONITOR_H
 
+#include "UCoreThreadDescriptor.h"
 #include <s2e/Plugin.h>
 #include <s2e/Plugins/CorePlugin.h>
 #include <s2e/S2EExecutionState.h>
+#include <s2e/Plugins/OSMonitor.h>
 
+#include <inttypes.h>
 #include <vector>
 #include <map>
 #include <set>
@@ -23,6 +26,7 @@ namespace s2e{
       public:
 
       UCoreMonitor(S2E *s2e) :OSMonitor(s2e){}
+      virtual ~UCoreMonitor();
       void initialize();
 
       typedef sigc::signal<void, S2EExecutionState*, std::string, uint64_t> TransitionSignal;
@@ -37,13 +41,10 @@ namespace s2e{
 
     private:
 
-      uint64_t m_UCoreVersion;
       bool m_UserMode, m_KernelMode;
       bool m_MonitorThreads;
       uint64_t m_KernelBase;
       uint64_t m_KernelEnd;
-      bool anaysing_zone;
-      uint64_t m_CurrentFuncEntry;
       std::vector<uint64_t> callStack;
 
       //Symbol table
@@ -87,13 +88,19 @@ namespace s2e{
       // Meta functions starts here
       void parseSystemMapFile();
       void notifyLoadForAllThreads(S2EExecutionState* state);
-      uint64_t GetKernelStart() const;
-      uint64_t GetKeInitThread() const;
-      uint64_t GetKeTerminateThread() const;
+      uint64_t getKernelStart() const;
+      uint64_t getKeInitThread() const;
+      uint64_t getKeTerminateThread() const;
       bool getThreadDescriptor(S2EExecutionState* state,
                                uint64_t pThread,
-                               ThreadDescriptor threadDescriptor);
+                               UCoreThreadDescriptor threadDescriptor);
       uint64_t getCurrentThread(S2EExecutionState *state);
+      bool getImports(S2EExecutionState *s, const ModuleDescriptor &desc, Imports &I);
+      bool getExports(S2EExecutionState *s, const ModuleDescriptor &desc, Exports &E);
+      bool isKernelAddress(uint64_t pc) const;
+      uint64_t getPid(S2EExecutionState *s, uint64_t pc);
+      bool getCurrentStack(S2EExecutionState *s, uint64_t *base, uint64_t *size);
+
     };// class UCoreMonitor
 
     class UCoreMonitorState: public PluginState{
