@@ -1,7 +1,7 @@
 #ifndef S2E_PLUGINS_UCOREMONITOR_H
 #define S2E_PLUGINS_UCOREMONITOR_H
 
-#include "UCoreThreadDescriptor.h"
+#include "UCorePCB.h"
 #include <s2e/Plugin.h>
 #include <s2e/Plugins/CorePlugin.h>
 #include <s2e/S2EExecutionState.h>
@@ -43,6 +43,7 @@ namespace s2e{
 
       bool m_UserMode, m_KernelMode;
       bool m_MonitorThreads;
+      bool m_MonitorFunction;
       uint64_t m_KernelBase;
       uint64_t m_KernelEnd;
       std::vector<uint64_t> callStack;
@@ -74,7 +75,7 @@ namespace s2e{
                                bool, uint64_t);
       void onTBJumpStart (ExecutionSignal *signal, S2EExecutionState *state,
                           TranslationBlock *tb, uint64_t, int jump_type);
-
+      void onCustomInstruction(S2EExecutionState *state, uint64_t arg);
       //User Mode Events
       // void slotMonitorProcessSwitch(S2EExecutionState *state,
       //                               uint64_t pc);
@@ -91,15 +92,16 @@ namespace s2e{
       uint64_t getKernelStart() const;
       uint64_t getKeInitThread() const;
       uint64_t getKeTerminateThread() const;
-      bool getThreadDescriptor(S2EExecutionState* state,
-                               uint64_t pThread,
-                               UCoreThreadDescriptor threadDescriptor);
+      // bool getThreadDescriptor(S2EExecutionState* state,
+      //                          uint64_t pThread,
+      //                          UCoreThreadDescriptor threadDescriptor);
       uint64_t getCurrentThread(S2EExecutionState *state);
       bool getImports(S2EExecutionState *s, const ModuleDescriptor &desc, Imports &I);
       bool getExports(S2EExecutionState *s, const ModuleDescriptor &desc, Exports &E);
       bool isKernelAddress(uint64_t pc) const;
       uint64_t getPid(S2EExecutionState *s, uint64_t pc);
       bool getCurrentStack(S2EExecutionState *s, uint64_t *base, uint64_t *size);
+      void uint2hexstring(uint64_t number, char* string, int size);
 
     };// class UCoreMonitor
 
