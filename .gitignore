@@ -1,4 +1,6 @@
 # gitignore
+/lab4
+/UCoreInterceptor
 build/
 test/
 report/
