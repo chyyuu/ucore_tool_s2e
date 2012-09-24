@@ -29,7 +29,7 @@ namespace s2e{
       virtual ~UCoreMonitor();
       void initialize();
 
-      typedef sigc::signal<void, S2EExecutionState*, std::string, uint64_t> TransitionSignal;
+      typedef sigc::signal<void, ExecutionSignal *, S2EExecutionState*, std::string, uint64_t> TransitionSignal;
       TransitionSignal onFunctionTransition;
 
       void slotCall(S2EExecutionState* state, uint64_t pc);

@@ -22,7 +22,7 @@ using namespace std;
 using namespace s2e;
 using namespace s2e::plugins;
 
-S2E_DEFINE_PLUGIN(UCoreMonitor, "Monitor of UCore OS", "Interceptor", );
+S2E_DEFINE_PLUGIN(UCoreMonitor, "Monitor of UCore OS", "UCoreMonitor", );
 
 uint64_t UCoreMonitor::s_KeInitThread = 0xc010bfcb;
 uint64_t UCoreMonitor::s_KeTerminateThread = 0xc010c0f9;
@@ -148,7 +148,10 @@ void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
                                        TranslationBlock *tb,
                                        uint64_t pc, bool static_target
                                        , uint64_t target_pc){
-  if(pc >= getKernelStart()){
+	uint64_t vpc = pc;
+	if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+		vpc += 0xc0000000;
+  if(vpc >= getKernelStart()){
     if(tb->s2e_tb_type == TB_CALL || tb->s2e_tb_type == TB_CALL_IND){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotCall));
     }
@@ -156,16 +159,31 @@ void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
 }
 void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
   char func_addr[1024];
-  uint2hexstring(state->getPc(), func_addr, 1024);
-  // s2e()->getDebugStream() << "Entering function @ 0x" << func_addr << "\n";
-  callStack.push_back(pc);
+  uint64_t vpc = state->getPc();
+  if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+	  vpc += 0xc0000000;
+  uint2hexstring(vpc, func_addr, 1024);
+
+//  s2e()->getDebugStream() << "Entering function:" << sTable[vpc].name << " @ 0x" << func_addr
+//		  << "\n";
+
+  //added by fwl
+
+  ExecutionSignal onFunctionSignal;
+  onFunctionTransition.emit(&onFunctionSignal, state, sTable[vpc].name, pc);
+  onFunctionSignal.emit(state, pc);
+  //callStack.push_back(pc);
+  callStack.push_back(vpc);
 }
 
 void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
                                   S2EExecutionState *state,
                                   TranslationBlock *tb,
                                   uint64_t, int jump_type){
-  if(state->getPc() >= getKernelStart()){
+	uint64_t vpc = state->getPc();
+	if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+			vpc += 0xc0000000;
+  if(vpc >= getKernelStart()){
     if(jump_type == JT_RET || jump_type == JT_LRET){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotRet));
     }
@@ -179,7 +197,14 @@ void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
   uint2hexstring(func, func_addr, 1024);
   char ret_addr[1024];
   uint2hexstring(pc, ret_addr, 1024);
-  // s2e()->getDebugStream() << "@ " << ret_addr << ": Exiting function @ 0x" << func_addr << "\n";
+//  s2e()->getDebugStream() << "@ 0x" << ret_addr << ": Exiting function:" << sTable[func].name
+//		  << " @ 0x" << func_addr << "\n";
+
+  //added by fwl
+
+  ExecutionSignal onFunctionSignal;
+  onFunctionTransition.emit(&onFunctionSignal, state, sTable[func].name, pc);
+  onFunctionSignal.emit(state, pc);
   callStack.pop_back();
 }
 
