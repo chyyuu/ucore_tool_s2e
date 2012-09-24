@@ -160,7 +160,7 @@ void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
 void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
   char func_addr[1024];
   uint64_t vpc = state->getPc();
-  if (vpc >= 0x00100000 && vpc <= 0x001000ff)
+  if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
 	  vpc += 0xc0000000;
   uint2hexstring(vpc, func_addr, 1024);
 
