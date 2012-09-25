@@ -6,7 +6,7 @@
 extern "C" {
 #include "config.h"
 #include "qemu-common.h"
-#include "./UCoreHeaders/proc.h"
+// #include "./UCoreHeaders/proc.h"
 }
 
 #include "UCoreMonitor.h"
@@ -82,7 +82,7 @@ void UCoreMonitor::onCustomInstruction(S2EExecutionState *state, uint64_t opcode
   uint64_t arg = (opcode >> 8) & 0xFF;
   if(arg == 0x1f){
     if(m_MonitorThreads){
-      s2e()->getDebugStream() << "Forking Stream :)";
+      s2e()->getMessagesStream() << "[UCoreMonitor]Forking Stream :)\n";
       uint64_t pThread = 0;
       bool ok = state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_EAX]),
                                                &pThread, 4);
@@ -113,11 +113,13 @@ void UCoreMonitor::onCustomInstruction(S2EExecutionState *state, uint64_t opcode
       memcpy(&runs, ucorePCB + 8, 4);
       memcpy(&parent, ucorePCB + 20, 4);
       memcpy(name, ucorePCB + 72, 16);
-      s2e() ->getDebugStream() << "State!" << state << "\n";
-      s2e() ->getDebugStream() << "Pid!" << pid << "\n";
-      s2e() ->getDebugStream() << "Runs!" << runs << "\n";
-      s2e() ->getDebugStream() << "Parent!" << parent << "\n";
-      s2e() ->getDebugStream() << "Name!" << name << "\n";
+      s2e() ->getMessagesStream() << "[UCoreMonitor]State:" << state << "\n";
+      s2e() ->getMessagesStream() << "[UCoreMonitor]Pid:" << pid << "\n";
+      s2e() ->getMessagesStream() << "[UCoreMonitor]Runs:" << runs << "\n";
+      s2e() ->getMessagesStream() << "[UCoreMonitor]Parent:0x";
+      s2e() ->getMessagesStream().write_hex(parent);
+      s2e() ->getMessagesStream() << "\n";
+      s2e() ->getMessagesStream() << "[UCoreMonitor]Name:" << name << "\n";
       delete[] ucorePCB;
       ucorePCB = NULL;
     }
@@ -148,9 +150,9 @@ void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
                                        TranslationBlock *tb,
                                        uint64_t pc, bool static_target
                                        , uint64_t target_pc){
-	uint64_t vpc = pc;
-	if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-		vpc += 0xc0000000;
+        uint64_t vpc = pc;
+        if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+                vpc += 0xc0000000;
   if(vpc >= getKernelStart()){
     if(tb->s2e_tb_type == TB_CALL || tb->s2e_tb_type == TB_CALL_IND){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotCall));
@@ -161,11 +163,11 @@ void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
   char func_addr[1024];
   uint64_t vpc = state->getPc();
   if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-	  vpc += 0xc0000000;
+          vpc += 0xc0000000;
   uint2hexstring(vpc, func_addr, 1024);
 
 //  s2e()->getDebugStream() << "Entering function:" << sTable[vpc].name << " @ 0x" << func_addr
-//		  << "\n";
+//                << "\n";
 
   //added by fwl
 
@@ -180,9 +182,9 @@ void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
                                   S2EExecutionState *state,
                                   TranslationBlock *tb,
                                   uint64_t, int jump_type){
-	uint64_t vpc = state->getPc();
-	if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-			vpc += 0xc0000000;
+        uint64_t vpc = state->getPc();
+        if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+                        vpc += 0xc0000000;
   if(vpc >= getKernelStart()){
     if(jump_type == JT_RET || jump_type == JT_LRET){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotRet));
@@ -198,7 +200,7 @@ void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
   char ret_addr[1024];
   uint2hexstring(pc, ret_addr, 1024);
 //  s2e()->getDebugStream() << "@ 0x" << ret_addr << ": Exiting function:" << sTable[func].name
-//		  << " @ 0x" << func_addr << "\n";
+//                << " @ 0x" << func_addr << "\n";
 
   //added by fwl
 
