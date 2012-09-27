@@ -57,20 +57,15 @@ namespace s2e{
         std::string name;
       } symbol_struct;
       typedef std::map<uint64_t, symbol_struct> SymbolTable;
+      typedef std::map<std::string, uint64_t> SymbolMap;
       std::string system_map_file;
+      SymbolMap sMap;
       SymbolTable sTable;
 
       //Kernel Addresses
-      static uint64_t s_KeInitThread;
-      static uint64_t s_KeTerminateThread;
-      static uint64_t s_KeSwitchThread;
-      static uint64_t s_KeCurrentThread;
+      uint64_t m_KeCurrentThread;
 
       //Signal connectors
-      void onTranslateInstruction(ExecutionSignal *signal,
-                                  S2EExecutionState *state,
-                                  TranslationBlock *tb,
-                                  uint64_t pc);
       void onPageDirectoryChange(S2EExecutionState *state,
                                  uint64_t previous,
                                  uint64_t current);
@@ -79,7 +74,6 @@ namespace s2e{
                                bool, uint64_t);
       void onTBJumpStart (ExecutionSignal *signal, S2EExecutionState *state,
                           TranslationBlock *tb, uint64_t, int jump_type);
-      void onCustomInstruction(S2EExecutionState *state, uint64_t arg);
       //User Mode Events
       // void slotMonitorProcessSwitch(S2EExecutionState *state,
       //                               uint64_t pc);
@@ -87,6 +81,7 @@ namespace s2e{
       //                                    uint64_t pc);
 
       //Kernel Mode Events
+      void slotFunctionTransition(ExecutionSignal *signal, S2EExecutionState *state, std::string fname, uint64_t pc);
       void slotKmThreadInit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadExit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc);
@@ -107,7 +102,6 @@ namespace s2e{
       bool isKernelAddress(uint64_t pc) const;
       uint64_t getPid(S2EExecutionState *s, uint64_t pc);
       bool getCurrentStack(S2EExecutionState *s, uint64_t *base, uint64_t *size);
-      void uint2hexstring(uint64_t number, char* string, int size);
 
     };// class UCoreMonitor
 
