@@ -34,7 +34,8 @@ namespace s2e{
 
       void slotCall(S2EExecutionState* state, uint64_t pc);
       void slotRet(S2EExecutionState* state, uint64_t pc);
-
+      UCorePCB current;
+      std::map<uint32_t, UCorePCB*> threadMap;
       void disconnect(S2EExecutionState *state){
         return;
       }
@@ -46,6 +47,7 @@ namespace s2e{
       bool m_MonitorFunction;
       uint64_t m_KernelBase;
       uint64_t m_KernelEnd;
+
       std::vector<uint64_t> callStack;
 
       //Symbol table
@@ -61,6 +63,8 @@ namespace s2e{
       //Kernel Addresses
       static uint64_t s_KeInitThread;
       static uint64_t s_KeTerminateThread;
+      static uint64_t s_KeSwitchThread;
+      static uint64_t s_KeCurrentThread;
 
       //Signal connectors
       void onTranslateInstruction(ExecutionSignal *signal,
@@ -85,6 +89,7 @@ namespace s2e{
       //Kernel Mode Events
       void slotKmThreadInit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadExit(S2EExecutionState *state, uint64_t pc);
+      void slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc);
 
       // Meta functions starts here
       void parseSystemMapFile();
@@ -92,6 +97,7 @@ namespace s2e{
       uint64_t getKernelStart() const;
       uint64_t getKeInitThread() const;
       uint64_t getKeTerminateThread() const;
+      uint64_t getKeSwitchThread() const;
       // bool getThreadDescriptor(S2EExecutionState* state,
       //                          uint64_t pThread,
       //                          UCoreThreadDescriptor threadDescriptor);

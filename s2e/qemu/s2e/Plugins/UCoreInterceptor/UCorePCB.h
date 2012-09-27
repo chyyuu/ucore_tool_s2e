@@ -9,9 +9,9 @@ namespace s2e {
 
   enum proc_state{
     PROC_UNINIT = 0,
-    PROC_SLEEPING,
-    PROC_RUNNABLE,
-    PROC_ZOMBIE
+    PROC_SLEEPING = 1,
+    PROC_RUNNABLE = 2,
+    PROC_ZOMBIE = 3
   };
 
   typedef struct _UCorePCB{

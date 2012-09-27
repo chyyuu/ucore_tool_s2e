@@ -26,6 +26,8 @@ S2E_DEFINE_PLUGIN(UCoreMonitor, "Monitor of UCore OS", "UCoreMonitor", );
 
 uint64_t UCoreMonitor::s_KeInitThread = 0xc010bfcb;
 uint64_t UCoreMonitor::s_KeTerminateThread = 0xc010c0f9;
+uint64_t UCoreMonitor::s_KeSwitchThread = 0xc010bc7e;
+uint64_t UCoreMonitor::s_KeCurrentThread = 0xc012ed48;
 
 UCoreMonitor::~UCoreMonitor(){
   // if(m_UserModeEvent){
@@ -38,12 +40,10 @@ UCoreMonitor::~UCoreMonitor(){
 
 void UCoreMonitor::initialize(){
   //Read kernel Version Address
-
   m_KernelBase = s2e()->getConfig()->getInt(getConfigKey() + ".kernelBase");
   m_KernelEnd = s2e()->getConfig()->getInt(getConfigKey() + ".kernelEnd");
   m_MonitorFunction = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorFunction");
   m_MonitorThreads = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorThreads");
-
   //User Mode Event and Kernel Mode Event
   // m_UserMode = s2e()->getConfig()->getBool(getConfigKey() + ".userMode");
   // m_KernelMode = s2e()->getConfig()->getBool(getConfigKey() + ".kernelMode");
@@ -62,8 +62,6 @@ void UCoreMonitor::initialize(){
     exit(-1);
   }
   parseSystemMapFile();
-
-
   //connect Signals
   if(m_MonitorFunction){
     s2e()->getCorePlugin()->onTranslateBlockEnd
@@ -73,7 +71,6 @@ void UCoreMonitor::initialize(){
   }
   s2e()->getCorePlugin()->onTranslateInstructionStart
     .connect(sigc::mem_fun(*this, &UCoreMonitor::onTranslateInstruction));
-
   s2e()->getCorePlugin()->onCustomInstruction
     .connect(sigc::mem_fun(*this, &UCoreMonitor::onCustomInstruction));
 }
@@ -120,6 +117,13 @@ void UCoreMonitor::onCustomInstruction(S2EExecutionState *state, uint64_t opcode
       s2e() ->getMessagesStream().write_hex(parent);
       s2e() ->getMessagesStream() << "\n";
       s2e() ->getMessagesStream() << "[UCoreMonitor]Name:" << name << "\n";
+      UCorePCB* pcb = new UCorePCB();
+      pcb->state = (enum proc_state)state;
+      pcb->pid = pid;
+      pcb->runs = runs;
+      pcb->parent = (UCorePCB*)parent;
+      memcpy(pcb->name, ucorePCB + 72, 16);
+      threadMap[pThread] = pcb;
       delete[] ucorePCB;
       ucorePCB = NULL;
     }
@@ -140,6 +144,9 @@ void UCoreMonitor::onTranslateInstruction(ExecutionSignal *signal,
     }else if(m_MonitorThreads && pc == getKeTerminateThread()){
       signal->connect(sigc::mem_fun(*this,
                                     &UCoreMonitor::slotKmThreadExit));
+    }else if(m_MonitorThreads && pc == getKeSwitchThread()){
+      signal->connect(sigc::mem_fun(*this,
+                                    &UCoreMonitor::slotKmThreadSwitch));
     }
   }
 }
@@ -159,6 +166,7 @@ void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
     }
   }
 }
+
 void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
   char func_addr[1024];
   uint64_t vpc = state->getPc();
@@ -222,6 +230,15 @@ uint64_t UCoreMonitor::getKeInitThread() const {
 
 uint64_t UCoreMonitor::getKeTerminateThread() const {
   return s_KeTerminateThread;
+}
+
+uint64_t UCoreMonitor::getKeSwitchThread() const {
+  return s_KeCurrentThread;
+}
+
+void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
+  s2e()->getDebugStream() << "UCoreMonitor: switching kernel-mode thread!\n";
+
 }
 
 void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
