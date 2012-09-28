@@ -37,3 +37,24 @@ UCoreMM "add UCoreMM:print alloc_pages info and print_pgdir"
 在本机make的时候，只有将s2e/qemu/s2e/Plugins/UCoreInterceptor/下的文件 <br>
 放在s2e/qemu/s2e/Plugins/下，并修改s2e/qemu/Makefile.target，才可以Make <br>
 通过。否则会报错。
+
+UCoreMM "add UCoreMM:free_pages info and modify"
+-------------------------
+1.解决之前的问题 <br>
+2.可以输出free_pages得到的Page及size信息，添加alloc_pages的size信息，输出结果如下： <br>
+----------alloc_pages info BEGIN---------- <br>
+#####alloc page size:1 <br>
+ref:0 <br>
+flags:1 <br>
+property:32129 <br>
+zone_num:0 <br>
+pra_vaddr:0 <br>
+----------alloc_pages info END---------- <br>
+----------free_pages info BEGIN---------- <br>
+#####free page size:1 <br>
+ref:0 <br>
+flags:1 <br>
+property:32129 <br>
+zone_num:0 <br>
+pra_vaddr:0 <br>
+----------free_pages info END---------- <br>
