@@ -6,12 +6,9 @@
 extern "C" {
 #include "config.h"
 #include "qemu-common.h"
-// #include "./UCoreHeaders/proc.h"
 }
 
 #include "UCoreMonitor.h"
-// #include "UCoreUserModeEvent.h"
-// #include "UCoreKernelModeEvent.h"
 #include <cstring>
 #include <iostream>
 #include <s2e/S2E.h>
@@ -24,12 +21,6 @@ using namespace s2e::plugins;
 
 S2E_DEFINE_PLUGIN(UCoreMonitor, "Monitor of UCore OS", "UCoreMonitor", );
 UCoreMonitor::~UCoreMonitor(){
-  // if(m_UserModeEvent){
-  //   delete m_UCoreUserModeEvent;
-  // }
-  // if(m_KernelModeEvent){
-  //   delete m_UCoreKernelModeEvent;
-  // }
 }
 
 void UCoreMonitor::initialize(){
@@ -38,15 +29,6 @@ void UCoreMonitor::initialize(){
   m_KernelEnd = s2e()->getConfig()->getInt(getConfigKey() + ".kernelEnd");
   m_MonitorFunction = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorFunction");
   m_MonitorThreads = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorThreads");
-  //User Mode Event and Kernel Mode Event
-  // m_UserMode = s2e()->getConfig()->getBool(getConfigKey() + ".userMode");
-  // m_KernelMode = s2e()->getConfig()->getBool(getConfigKey() + ".kernelMode");
-  // if(m_UserMode){
-  //   m_UCoreUserModeEvent = new UCoreUserModeEvent(this);
-  // }
-  // if(m_KernelMode){
-  //   m_KernelModeEvent = new UCoreKernelModeEvent(this);
-  // }
 
   //parse system map file
   bool ok;
@@ -65,17 +47,17 @@ void UCoreMonitor::initialize(){
   }
   if(m_MonitorThreads){
     m_KeCurrentThread = sMap["current"];
-    this->onFunctionTransition.connect(sigc::mem_fun(*this, &UCoreMonitor::slotFunctionTransition));
+    this->onFunctionCalling.connect(sigc::mem_fun(*this, &UCoreMonitor::slotFunctionCalling));
   }
 }
 
-void UCoreMonitor::slotFunctionTransition(ExecutionSignal *signal,
+void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
                                           S2EExecutionState *state,
                                           std::string fname, uint64_t pc){
   if(fname == "proc_run"){
     //Proc switch
     signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotKmThreadSwitch));
-  }else if(fname == "alloc_proc"){
+  }else if(fname == "set_proc_name"){
     //Thread create
     signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotKmThreadInit));
   }else if(fname == "do_exit"){
@@ -145,9 +127,9 @@ void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
                                        TranslationBlock *tb,
                                        uint64_t pc, bool static_target
                                        , uint64_t target_pc){
-        uint64_t vpc = pc;
-        if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-                vpc += 0xc0000000;
+  uint64_t vpc = pc;
+  if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+    vpc += 0xc0000000;
   if(vpc >= getKernelStart()){
     if(tb->s2e_tb_type == TB_CALL || tb->s2e_tb_type == TB_CALL_IND){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotCall));
@@ -159,17 +141,19 @@ void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
 
   uint64_t vpc = state->getPc();
   if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-          vpc += 0xc0000000;
+    vpc += 0xc0000000;
 
-//  s2e()->getDebugStream() << "Entering function:" << sTable[vpc].name << " @ 0x" << func_addr
-//                << "\n";
-
+//  s2e()->getDebugStream() << "Entering function:" << sTable[vpc].name 
+//  << " @ 0x" << func_addr << "\n";
   //added by fwl
-
   ExecutionSignal onFunctionSignal;
   onFunctionTransition.emit(&onFunctionSignal, state, sTable[vpc].name, pc);
   onFunctionSignal.emit(state, pc);
-  //callStack.push_back(pc);
+  //added by Nuk
+  ExecutionSignal onFunctionCallingSignal;
+  onFunctionCalling.emit(&onFunctionCallingSignal, state,
+                         sTable[vpc].name, pc);
+  onFunctionCallingSignal.emit(state, pc);
   callStack.push_back(vpc);
 }
 
@@ -177,24 +161,22 @@ void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
                                   S2EExecutionState *state,
                                   TranslationBlock *tb,
                                   uint64_t, int jump_type){
-        uint64_t vpc = state->getPc();
-        if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-                        vpc += 0xc0000000;
+  uint64_t vpc = state->getPc();
+  if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+    vpc += 0xc0000000;
   if(vpc >= getKernelStart()){
     if(jump_type == JT_RET || jump_type == JT_LRET){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotRet));
     }
   }
 }
+
 void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
   if(callStack.size() == 0)
     return;
   uint64_t func = callStack[callStack.size() - 1];
-//  s2e()->getDebugStream() << "@ 0x" << ret_addr << ": Exiting function:" << sTable[func].name
-//                << " @ 0x" << func_addr << "\n";
-
+  //s2e()->getDebugStream() << "Exiting function:" << sTable[func].name << "\n";
   //added by fwl
-
   ExecutionSignal onFunctionSignal;
   onFunctionTransition.emit(&onFunctionSignal, state, sTable[func].name, pc);
   onFunctionSignal.emit(state, pc);
@@ -202,90 +184,38 @@ void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
 }
 
 // Kernel Events
-
 uint64_t UCoreMonitor::getKernelStart() const {
   return m_KernelBase;
 }
 
+//Monitoring function proc_run
 void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
-  s2e()->getDebugStream() << "UCoreMonitor: switching kernel-mode thread!\n";
+  s2e()->getDebugStream() << "UCoreMonitor: switching kernel-mode thread @ ";
   s2e()->getDebugStream().write_hex(pc) << "\n";
-
+  UCorePCB* current = parseUCorePCB(m_KeCurrentThread);
+  uint64_t KeNextThread = state->getBp() + 8;
+  UCorePCB* next = parseUCorePCB(KeNextThread);
+  onThreadSwitching.emit(state, current, next, pc);
 }
 
+//Monitoring func set_proc_name
 void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
   s2e()->getDebugStream() << "UCoreMonitor: creating kernel-mode thread! \n";
   s2e()->getDebugStream().write_hex(pc) << "\n";
-  // uint32_t pThread;
-  //TODO: Get pThread, the pointer of current UCOREPCB
-  // UCoreThreadDescriptor threadDescriptor;
-  // bool res = getThreadDescriptor(state, pThread, threadDescriptor);
-  // if(!res){
-    // return;
-  // }
-  // onThreadCreate.emit(state, threadDescriptor);
+  uint64_t KeProc = state->getBp() + 8;
+  uint64_t KeProcName = state0>getBp() + 4;
+  UCorePCB* proc = parseUCorePCB(KeProc);
+  proc->name = parseUCorePName(KeProcName);
+  onThreadCreating.emit(state, proc, pc);
 }
 
+//Monitoring func do_exit
 void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
   s2e()->getDebugStream() << "UCoreMonitor: killing kernel-mode thread! \n";
   s2e()->getDebugStream().write_hex(pc) << "\n";
-  // uint64_t pThread = getCurrentThread(state);
-  // UCoreThreadDescriptor threadDescriptor;
-  // bool res = getThreadDescriptor(state, pThread, threadDescriptor);
-  // if(!res){
-  //   return;
-  // }
-  // s2e()->getDebugStream() << "UCoreMonitor: terminating kernel-mode thread";
-  // onThreadExit.emit(state, threadDescriptor);
+  UCorePCB current = parseUCorePCB(m_KeCurrentThread);
+  onThreadKilling.emit(state, current, pc);
 }
-
-// uint64_t UCoreMonitor::getCurrentThread(S2EExecutionState *state){
-// }
-// bool UCoreMonitor::getThreadDescriptor(S2EExecutionState* state,
-//                                        uint64_t pThread,
-//                                        UCoreThreadDescriptor threadDescriptor){
-//   uint64_t base = 0, size = 0;
-//   if(!getThreadStack(state, pThread, &base, &size)){
-//     return false;
-//   }
-//   threadDescriptor.KernelMode = true;
-//   threadDescriptor.KernelStackBottom = base;
-//   threadDescriptor.KernelStackSize = size;
-//   return true;
-// }
-// bool UCoreMonitor::getThreadStack(S2EExecutionState* state,
-//                                   uint64_t pThread,
-//                                   uint64_t* base,
-//                                   uint64_t* size){
-//   if(!isKernelAddress(state->getPc())){
-//     assert(false && "User-mode stack retrieval not implemented.");
-//   }
-//   //Get the PCB from given pointer pThread
-//   s2e::ucore::UCOREKTHREAD kThread;
-//   if(!state->readMemoryConcrete(pThread, &kThread, sizeof(kThread))){
-//     return false;
-//   }
-//   if(base){
-//     *base = kThread.StackLimit;
-//   }
-//   if(size){
-//     *size = kThread.InitialStack - kThread.StackLimit;
-//   }
-// }
-// bool UCoreMonitor::getCurrentStack(S2EExecutionState* state,
-//                                    uint64_t pThread,
-//                                    uint64_t* base,
-//                                    uint64_t* size){
-//   uint64_t pThread = getCurrentThread(state);
-//   if(!pThread){
-//     return false;
-//   }
-//   return getThreadStack(state, pThread, base, size);
-// }
-
-// bool UCoreMonitor::isKernelAddress(uint64_t pc) const {
-//   return pc >= getKernelStart();
-// }
 
 bool UCoreMonitor::getImports(S2EExecutionState *s, const ModuleDescriptor &desc,
                 Imports &I){

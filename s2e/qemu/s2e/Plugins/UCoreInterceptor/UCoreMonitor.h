@@ -1,5 +1,5 @@
-#ifndef S2E_PLUGINS_UCOREMONITOR_H
-#define S2E_PLUGINS_UCOREMONITOR_H
+#ifndef _UCORE_MONITOR_H
+#define _UCORE_MONITOR_H
 
 #include "UCorePCB.h"
 #include <s2e/Plugin.h>
@@ -20,22 +20,23 @@ namespace s2e{
     class UCoreKernelModeEvent;
 
     class UCoreMonitor : public OSMonitor{
-
       S2E_PLUGIN
-
       public:
-
       UCoreMonitor(S2E *s2e) :OSMonitor(s2e){}
       virtual ~UCoreMonitor();
       void initialize();
 
       typedef sigc::signal<void, ExecutionSignal *, S2EExecutionState*, std::string, uint64_t> TransitionSignal;
       TransitionSignal onFunctionTransition;
+      TransitionSignal onFunctionCalling;
+      typedef sigc::signal<void, S2EExecutionState*, UCorePCB*, UCorePCB*, uint64_t> ThreadSwitchSignal;
+      typedef sigc::signal<void, S2EExecutionState*, UCorePCB*, uint64_t> ThreadSignal;
+      ThreadSwitchSignal onThreadSwitching;
+      ThreadSignal onThreadCreating;
+      ThreadSignal onThreadKilling;
 
       void slotCall(S2EExecutionState* state, uint64_t pc);
       void slotRet(S2EExecutionState* state, uint64_t pc);
-      UCorePCB current;
-      std::map<uint32_t, UCorePCB*> threadMap;
       void disconnect(S2EExecutionState *state){
         return;
       }
@@ -81,13 +82,16 @@ namespace s2e{
       //                                    uint64_t pc);
 
       //Kernel Mode Events
-      void slotFunctionTransition(ExecutionSignal *signal, S2EExecutionState *state, std::string fname, uint64_t pc);
+      void slotFunctionCalling(ExecutionSignal *signal, S2EExecutionState *state
+                               ,std::string fname, uint64_t pc);
       void slotKmThreadInit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadExit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc);
 
       // Meta functions starts here
       void parseSystemMapFile();
+      UCorePCB* parseUCorePCB(uint64_t addr);
+      std::string parseUCorePName(uint64_t addr);
       void notifyLoadForAllThreads(S2EExecutionState* state);
       uint64_t getKernelStart() const;
       uint64_t getKeInitThread() const;
@@ -102,7 +106,6 @@ namespace s2e{
       bool isKernelAddress(uint64_t pc) const;
       uint64_t getPid(S2EExecutionState *s, uint64_t pc);
       bool getCurrentStack(S2EExecutionState *s, uint64_t *base, uint64_t *size);
-
     };// class UCoreMonitor
 
     class UCoreMonitorState: public PluginState{
