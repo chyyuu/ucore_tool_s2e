@@ -33,7 +33,7 @@ namespace s2e{
       typedef sigc::signal<void, S2EExecutionState*, UCorePCB*, uint64_t> ThreadSignal;
       ThreadSwitchSignal onThreadSwitching;
       ThreadSignal onThreadCreating;
-      ThreadSignal onThreadKilling;
+      ThreadSignal onThreadExiting;
 
       void slotCall(S2EExecutionState* state, uint64_t pc);
       void slotRet(S2EExecutionState* state, uint64_t pc);
@@ -94,6 +94,7 @@ namespace s2e{
                               uint64_t addr);
       std::string* parseUCorePName(S2EExecutionState *state,
                                   uint64_t addr);
+	  void printUCorePCB(UCorePCB* ucorePCB);
       void notifyLoadForAllThreads(S2EExecutionState* state);
       uint64_t getKernelStart() const;
       uint64_t getKeInitThread() const;
