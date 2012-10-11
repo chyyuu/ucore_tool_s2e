@@ -22,6 +22,6 @@ Here is the code directory tree of my s2e project.
     | ./s2e                         // source code
     | ./build                       // binary
     | ./test                        // test dir
-        |--./test/lab4              // OS being tested
+    | ----./test/lab4              // OS being tested
     | ./doc                         //documentation
     | ./wiki                        //wiki
