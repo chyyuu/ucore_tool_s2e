@@ -18,7 +18,7 @@ Have some coffee and wait for the finish of the compilation.
 
 Here is the code directory tree of my s2e project.
 
-    ./
+    ucore_tool_s2e/
     | ./s2e                         // source code
     | ./build                       // binary
     | ./test                        // test dir
