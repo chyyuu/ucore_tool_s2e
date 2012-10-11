@@ -2,8 +2,16 @@
 
 #define _UCORE_THREAD_DESCRIPTOR_H_
 
+#define PCB_SIZE                    120
+#define PCB_STATE_OFFSET            0
+#define PCB_PID_OFFSET              4
+#define PCB_RUNS_OFFSET             8
+#define PCB_PARENT_OFFSET           20
+#define PCB_NAME_OFFSET             72
+#define PCB_NAME_LEN                16
+
 #include <inttypes.h>
-#define PROC_NAME_LEN               15
+#include <string>
 
 namespace s2e {
 
@@ -18,9 +26,10 @@ namespace s2e {
     enum proc_state state;
     uint32_t pid;
     uint32_t runs;
+    uint32_t parentAddr;
+    std::string* name;
     struct _UCorePCB* parent;
-    char name[PROC_NAME_LEN + 1];
-  }UCorePCB;
+  } UCorePCB;
 }
 
 #endif

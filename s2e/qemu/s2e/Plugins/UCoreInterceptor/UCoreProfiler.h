@@ -24,7 +24,7 @@ namespace s2e{
                             S2EExecutionState* state,
                             UCorePCB* newThread,
                             uint64_t pc);
-      void slotThreadKill(ExecutionSignal* signal,
+      void slotThreadExit(ExecutionSignal* signal,
                         S2EExecutionState* state,
                         UCorePCB* newThread,
                         uint64_t pc);

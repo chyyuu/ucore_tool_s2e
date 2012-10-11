@@ -11,6 +11,8 @@ extern "C" {
 #include "UCoreMonitor.h"
 #include <cstring>
 #include <iostream>
+#include <cstdlib>
+#include <string>
 #include <s2e/S2E.h>
 #include <s2e/ConfigFile.h>
 #include <s2e/Utils.h>
@@ -53,7 +55,7 @@ void UCoreMonitor::initialize(){
 
 void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
                                           S2EExecutionState *state,
-                                          std::string fname, uint64_t pc){
+                                          string fname, uint64_t pc){
   if(fname == "proc_run"){
     //Proc switch
     signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotKmThreadSwitch));
@@ -65,61 +67,43 @@ void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
     signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotKmThreadExit));
   }
 }
+//Monitoring function proc_run
+void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
+  uint64_t esp = state->getSp();
+  //Note: 4 for return address
+  uint64_t ppPCB = esp + 4;
+  UCorePCB* prev = parseUCorePCB(state, m_KeCurrentThread);
+  UCorePCB* next = parseUCorePCB(state, ppPCB);
+  onThreadSwitching.emit(state, prev, next, pc);
+}
 
-// void UCoreMonitor::onCustomInstruction(S2EExecutionState *state, uint64_t opcode){
-//   uint64_t arg = (opcode >> 8) & 0xFF;
-//   if(arg == 0x1f){
-//     if(m_MonitorThreads){
-//       s2e()->getMessagesStream() << "[UCoreMonitor]Forking Stream :)\n";
-//       uint64_t pThread = 0;
-//       bool ok = state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_EAX]),
-//                                                &pThread, 4);
-//       if(!ok){
-//         s2e()->getWarningsStream(state) << "[ERROR] Get pThread failed.\n";
-//         return;
-//       }
-//       uint64_t pSize = 0;
-//       ok  = state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ECX]),
-//                                            &pSize, 4);
-//       if(!ok){
-//         s2e()->getWarningsStream(state) << "[ERROR] Get pSize failed.\n";
-//         return;
-//       }
+//Monitoring func set_proc_name
+void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
+  s2e()->getDebugStream() << "UCoreMonitor: creating kernel-mode thread! @ ";
+  s2e()->getDebugStream().write_hex(pc) << "\n";
+  uint64_t esp = state->getSp();
+  //Note: here 4 = return address
+  uint64_t ppPCB = esp + 4;
+  //Note: here 8 = 4(return address) + 4(proc struct pointer);
+  uint64_t ppName = esp + 8;
+  UCorePCB* proc = parseUCorePCB(state, ppPCB);
+  proc->name = parseUCorePName(state, ppName);
+  //for debug
+  //s2e()->getDebugStream() << "proc->state: " << proc->state <<"\n";
+  //s2e()->getDebugStream() << "proc->pid: " << proc->pid << "\n";
+  //s2e()->getDebugStream() << "proc->runs: " << proc->runs << "\n";
+  //s2e()->getDebugStream() << "proc->parent: ";
+  //s2e()->getDebugStream().write_hex(proc->parentAddr) << "\n";
+  //s2e()->getDebugStream() << "proc->name: " << *proc->name << "\n";
 
-//       char* ucorePCB = new char[pSize];
-//       if(!state->readMemoryConcrete(pThread, ucorePCB, pSize)){
-//         s2e()->getWarningsStream(state) << "[ERROR] Get PCB content failed.";
-//         return;
-//       }
-//       uint32_t state;
-//       uint32_t pid;
-//       uint32_t runs;
-//       uint32_t parent;
-//       char name[16];
-//       memcpy(&state, ucorePCB, 4);
-//       memcpy(&pid, ucorePCB + 4, 4);
-//       memcpy(&runs, ucorePCB + 8, 4);
-//       memcpy(&parent, ucorePCB + 20, 4);
-//       memcpy(name, ucorePCB + 72, 16);
-//       s2e() ->getMessagesStream() << "[UCoreMonitor]State:" << state << "\n";
-//       s2e() ->getMessagesStream() << "[UCoreMonitor]Pid:" << pid << "\n";
-//       s2e() ->getMessagesStream() << "[UCoreMonitor]Runs:" << runs << "\n";
-//       s2e() ->getMessagesStream() << "[UCoreMonitor]Parent:0x";
-//       s2e() ->getMessagesStream().write_hex(parent);
-//       s2e() ->getMessagesStream() << "\n";
-//       s2e() ->getMessagesStream() << "[UCoreMonitor]Name:" << name << "\n";
-//       UCorePCB* pcb = new UCorePCB();
-//       pcb->state = (enum proc_state)state;
-//       pcb->pid = pid;
-//       pcb->runs = runs;
-//       pcb->parent = (UCorePCB*)parent;
-//       memcpy(pcb->name, ucorePCB + 72, 16);
-//       threadMap[pThread] = pcb;
-//       delete[] ucorePCB;
-//       ucorePCB = NULL;
-//     }
-//   }
-// }
+  onThreadCreating.emit(state, proc, pc);
+}
+
+//Monitoring func do_exit
+void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
+  UCorePCB* current = parseUCorePCB(state, m_KeCurrentThread);
+  onThreadKilling.emit(state, current, pc);
+}
 
 //emit Signal
 void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
@@ -143,8 +127,6 @@ void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
   if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
     vpc += 0xc0000000;
 
-//  s2e()->getDebugStream() << "Entering function:" << sTable[vpc].name 
-//  << " @ 0x" << func_addr << "\n";
   //added by fwl
   ExecutionSignal onFunctionSignal;
   onFunctionTransition.emit(&onFunctionSignal, state, sTable[vpc].name, pc);
@@ -188,34 +170,6 @@ uint64_t UCoreMonitor::getKernelStart() const {
   return m_KernelBase;
 }
 
-//Monitoring function proc_run
-void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
-  s2e()->getDebugStream() << "UCoreMonitor: switching kernel-mode thread @ ";
-  s2e()->getDebugStream().write_hex(pc) << "\n";
-  UCorePCB* current = parseUCorePCB(m_KeCurrentThread);
-  uint64_t KeNextThread = state->getBp() + 8;
-  UCorePCB* next = parseUCorePCB(KeNextThread);
-  onThreadSwitching.emit(state, current, next, pc);
-}
-
-//Monitoring func set_proc_name
-void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
-  s2e()->getDebugStream() << "UCoreMonitor: creating kernel-mode thread! \n";
-  s2e()->getDebugStream().write_hex(pc) << "\n";
-  uint64_t KeProc = state->getBp() + 8;
-  uint64_t KeProcName = state0>getBp() + 4;
-  UCorePCB* proc = parseUCorePCB(KeProc);
-  proc->name = parseUCorePName(KeProcName);
-  onThreadCreating.emit(state, proc, pc);
-}
-
-//Monitoring func do_exit
-void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
-  s2e()->getDebugStream() << "UCoreMonitor: killing kernel-mode thread! \n";
-  s2e()->getDebugStream().write_hex(pc) << "\n";
-  UCorePCB current = parseUCorePCB(m_KeCurrentThread);
-  onThreadKilling.emit(state, current, pc);
-}
 
 bool UCoreMonitor::getImports(S2EExecutionState *s, const ModuleDescriptor &desc,
                 Imports &I){
@@ -238,6 +192,47 @@ uint64_t UCoreMonitor::getPid(S2EExecutionState *s, uint64_t pc){
 bool UCoreMonitor::getCurrentStack(S2EExecutionState *s, uint64_t *base,
                                    uint64_t *size){
   return false;
+}
+
+//Nuk's parsing area, dirty code's all here ;)
+
+UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
+                                 uint64_t addr){
+  uint64_t pPCB = 0;
+  if(!state->readMemoryConcrete(addr, (void*)(&pPCB), 4)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
+    return NULL;
+  }
+  UCorePCB* pcb = new UCorePCB();
+  char block[PCB_SIZE];
+  if(!state->readMemoryConcrete(pPCB, block, PCB_SIZE)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get PCB error!\n";
+    return NULL;
+  }
+  memcpy(&(pcb->state), block + PCB_STATE_OFFSET, 4);
+  memcpy(&(pcb->pid), block + PCB_PID_OFFSET, 4);
+  memcpy(&(pcb->runs), block + PCB_RUNS_OFFSET, 4);
+  memcpy(&(pcb->parentAddr), block + PCB_PARENT_OFFSET, 4);
+  return pcb;
+}
+std::string* UCoreMonitor::parseUCorePName(S2EExecutionState *state,
+                                   uint64_t addr){
+  char block[PCB_NAME_LEN];
+  memset(block, 0, PCB_NAME_LEN);
+  uint64_t pBlock = 0;
+  //for debug
+  //s2e()->getDebugStream() << "pPointer: ";
+  //s2e()->getDebugStream().write_hex(pPointer) << "\n";
+  if(!state->readMemoryConcrete(addr, (void*)(&pBlock), 4)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get pBlock error!\n";
+    return NULL;
+  }
+  if(!state->readMemoryConcrete(pBlock, block, PCB_NAME_LEN)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get block error!\n";
+    return NULL;
+  }
+  std::string* result = new std::string(block);
+  return result;
 }
 
 void UCoreMonitor::parseSystemMapFile(){

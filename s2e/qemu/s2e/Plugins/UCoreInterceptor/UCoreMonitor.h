@@ -90,8 +90,10 @@ namespace s2e{
 
       // Meta functions starts here
       void parseSystemMapFile();
-      UCorePCB* parseUCorePCB(uint64_t addr);
-      std::string parseUCorePName(uint64_t addr);
+      UCorePCB* parseUCorePCB(S2EExecutionState *state,
+                              uint64_t addr);
+      std::string* parseUCorePName(S2EExecutionState *state,
+                                  uint64_t addr);
       void notifyLoadForAllThreads(S2EExecutionState* state);
       uint64_t getKernelStart() const;
       uint64_t getKeInitThread() const;

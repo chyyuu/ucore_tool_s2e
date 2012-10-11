@@ -477,6 +477,12 @@ void S2EExecutionState::setSp(uint64_t sp)
     writeCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &sp, sizeof(target_ulong));
 }
 
+uint64_t S2EExecutionState::getBp() const{
+    ref<Expr> e = readCpuRegister(CPU_OFFSET(regs[R_EBP]),
+                                  8*sizeof(target_ulong));
+    return cast<ConstantExpr>(e)->getZExtValue(64);
+}
+
 uint64_t S2EExecutionState::getSp() const
 {
     ref<Expr> e = readCpuRegister(CPU_OFFSET(regs[R_ESP]),
