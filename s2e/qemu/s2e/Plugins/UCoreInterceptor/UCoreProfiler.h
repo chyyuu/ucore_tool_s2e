@@ -17,8 +17,8 @@ namespace s2e{
       //signal slots
       void slotThreadSwitch(ExecutionSignal* signal,
                           S2EExecutionState* state,
-                          UCorePCB* prev,
-                          UCorePCB* next,
+                          uint64_t prevPid,
+                          uint64_t nextPid,
                           uint64_t pc);
       void slotThreadCreation(ExecutionSignal* signal,
                             S2EExecutionState* state,
@@ -26,7 +26,7 @@ namespace s2e{
                             uint64_t pc);
       void slotThreadExit(ExecutionSignal* signal,
                         S2EExecutionState* state,
-                        UCorePCB* newThread,
+                        uint64_t exitPid,
                         uint64_t pc);
       private:
       UCorePCB* current;
