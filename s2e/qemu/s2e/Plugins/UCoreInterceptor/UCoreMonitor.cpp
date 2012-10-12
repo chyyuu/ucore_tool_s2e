@@ -69,6 +69,7 @@ void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
 }
 //Monitoring function proc_run
 void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
+  s2e()->getDebugStream() << "[UCoreMonitor]Thread switching\n";
   uint64_t esp = state->getSp();
   //Note: 4 for return address
   uint64_t ppPCB = esp + 4;
@@ -80,6 +81,7 @@ void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
 }
 //Monitoring func set_proc_name
 void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
+  s2e()->getDebugStream() << "[UCoreMonitor]Thread initing\n";
   uint64_t esp = state->getSp();
   //Note: here 4 = return address
   uint64_t ppPCB = esp + 4;
@@ -93,25 +95,27 @@ void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
 }
 //Monitoring func do_exit
 void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
+  s2e()->getDebugStream() << "[UCoreMonitor]Thread exiting\n";
   UCorePCB* current = parseUCorePCB(state, m_KeCurrentThread);
   printUCorePCB(current);
   onThreadExiting.emit(state, current, pc);
 }
 
 //Printing UCorePCB
-void UCoreMonitor::printUCorePCB(UCorePCB* ucorePCB){
-	s2e()->getDebugStream() << "proc->state: " << proc->state <<"\n";
-	s2e()->getDebugStream() << "proc->pid: " << proc->pid << "\n";
-	s2e()->getDebugStream() << "proc->runs: " << proc->runs << "\n";
-	s2e()->getDebugStream() << "proc->parent: ";
-	s2e()->getDebugStream().write_hex(proc->parentAddr) << "\n";
-	s2e()->getDebugStream() << "proc->name: " << *proc->name << "\n";
+void UCoreMonitor::printUCorePCB(UCorePCB* proc){
+  if(proc == NULL){
+    return;
+  }
+  s2e()->getDebugStream() << "proc->state: " << proc->state <<"\n";
+  s2e()->getDebugStream() << "proc->pid: " << proc->pid << "\n";
+  s2e()->getDebugStream() << "proc->runs: " << proc->runs << "\n";
+  s2e()->getDebugStream() << "proc->parent: ";
+  s2e()->getDebugStream().write_hex(proc->parentAddr) << "\n";
+  if(proc->name != NULL){
+    s2e()->getDebugStream() << "proc->name: " << *proc->name << "\n";
+  }
 }
-<<<<<<< HEAD
-=======
 
-
->>>>>>> 52dab65de7a0181f36396e818b18144dbf4f37fd
 //emit Signal
 void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
                                        S2EExecutionState *state,
