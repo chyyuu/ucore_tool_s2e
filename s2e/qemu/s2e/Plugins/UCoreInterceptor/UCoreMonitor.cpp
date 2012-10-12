@@ -76,11 +76,8 @@ void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
   UCorePCB* next = parseUCorePCB(state, ppPCB);
   onThreadSwitching.emit(state, prev, next, pc);
 }
-
 //Monitoring func set_proc_name
 void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
-  s2e()->getDebugStream() << "UCoreMonitor: creating kernel-mode thread! @ ";
-  s2e()->getDebugStream().write_hex(pc) << "\n";
   uint64_t esp = state->getSp();
   //Note: here 4 = return address
   uint64_t ppPCB = esp + 4;
@@ -98,13 +95,11 @@ void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
 
   onThreadCreating.emit(state, proc, pc);
 }
-
 //Monitoring func do_exit
 void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
   UCorePCB* current = parseUCorePCB(state, m_KeCurrentThread);
   onThreadKilling.emit(state, current, pc);
 }
-
 //emit Signal
 void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
                                        S2EExecutionState *state,
