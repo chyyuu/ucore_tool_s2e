@@ -43,7 +43,7 @@ UCoreMM "add UCoreMM:free_pages info and modify"
 1.解决之前的问题 <br>
 2.可以输出free_pages得到的Page及size信息，添加alloc_pages的size信息，输出结果如下： <br>
 ----------alloc_pages info BEGIN---------- <br>
-#####alloc page size:1 <br>
+ #####alloc page size:1 <br>
 ref:0 <br>
 flags:1 <br>
 property:32129 <br>
@@ -51,10 +51,14 @@ zone_num:0 <br>
 pra_vaddr:0 <br>
 ----------alloc_pages info END---------- <br>
 ----------free_pages info BEGIN---------- <br>
-#####free page size:1 <br>
+ #####free page size:1 <br>
 ref:0 <br>
 flags:1 <br>
 property:32129 <br>
 zone_num:0 <br>
 pra_vaddr:0 <br>
 ----------free_pages info END---------- <br>
+
+UCoreMM "use cr0 to detect if enable_paging"
+-------------------------
+使用cr0来判断是否已经启用分页机制。

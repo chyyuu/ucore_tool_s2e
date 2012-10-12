@@ -55,6 +55,12 @@ namespace plugins{
 	void UCoreMemoryManagement::sortByFname(ExecutionSignal *signal, S2EExecutionState *state,
 			string fname, uint64_t pc){
 		//s2e()->getDebugStream() << "#Function:" << fname << " received\n";
+		if (enable_paging == false){
+			uint32_t cr0;
+			cr0 = state->readCpuState(CPU_OFFSET(cr[0]), 8*sizeof(target_ulong));
+			if ((cr0 & 0x80000000) != 0)
+				enable_paging = true;
+		}
 		if (fname == "page_init")
 			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::onPmminitTransition));
 		else if (fname == "alloc_pages")
@@ -86,13 +92,12 @@ namespace plugins{
 			++allocPageRet;
 			if (allocPageRet == 2){
 
-
 				uint64_t pageAddr = 0;
 				Page apage;
 
 				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_EAX]), &pageAddr, 4))
 					s2e()->getDebugStream() << "#####get allocpage address fail\n";
-				if (pc >= 0x00010000 && pc <= 0x3fffffff)
+				if (enable_paging == false)
 					pageAddr -= 0xc0000000;
 
 //				char buf[9];
@@ -128,7 +133,7 @@ namespace plugins{
 //				sprintf(buf, "%08lx", pc);
 //				s2e()->getDebugStream() << "#####p:" << buf << "\n";
 
-				if (pc >= 0x00010000 && pc <= 0x3fffffff)
+				if (enable_paging == false)
 					pAddr -= 0xc0000000;
 				if (!state->readMemoryConcrete(pAddr, &allocPageSize, 4))
 					s2e()->getDebugStream() << "#####get allocpage size fail\n";
@@ -154,7 +159,7 @@ namespace plugins{
 					s2e()->getDebugStream() << "#####get esp fail\n";
 				pAddr += 0x4;
 				pAddr += S2EESPOFFSET;
-				if (pc >= 0x00010000 && pc <= 0x3fffffff)
+				if (enable_paging == false)
 					pAddr -= 0xc0000000;
 				if (!state->readMemoryConcrete(pAddr, &freePageSize, 4))
 					s2e()->getDebugStream() << "#####get freepage size fail\n";
@@ -176,7 +181,7 @@ namespace plugins{
 
 				if (!state->readMemoryConcrete(pAddr, &fAddr, 4))
 					s2e()->getDebugStream() << "#####get freepage addr fail\n";
-				if (pc >= 0x00010000 && pc <= 0x3fffffff)
+				if (enable_paging == false)
 					fAddr -= 0xc0000000;
 				if (!state->readMemoryConcrete(fAddr, &fpage, sizeof(Page)))
 					s2e()->getDebugStream() << "#####get freepage struct fail\n";
@@ -200,8 +205,9 @@ namespace plugins{
 	void UCoreMemoryManagement::print_pgdir(ExecutionSignal *signal,
 			 S2EExecutionState *state, TranslationBlock *tb, uint64 pc){
 		uint64_t vpc = pc;
-		if (pc >= 0x00010000 && pc <= 0x3fffffff)
+		if (enable_paging == false)
 			vpc += 0xc0000000;
+
 		if (vpc == printPc){
 			if (pmmInitDone != 2){
 				s2e()->getDebugStream() << "pmm not init!\n";

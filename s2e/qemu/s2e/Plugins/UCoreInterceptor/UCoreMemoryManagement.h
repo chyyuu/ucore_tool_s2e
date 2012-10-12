@@ -33,9 +33,10 @@ namespace plugins{
 			int freePageCall;
 			uint64_t printPc;
 			Page *allocpage;
+			bool enable_paging;
 	public:
 		UCoreMemoryManagement(S2E *s2e) :Plugin(s2e), pmmInitDone(0),
-			allocPageRet(0), freePageCall(0), allocpage(NULL){}
+			allocPageRet(0), freePageCall(0), allocpage(NULL), enable_paging(false){}
 		void initialize();
 		typedef sigc::signal<void, S2EExecutionState*, uint64_t> PmmSignal;
 		PmmSignal onPmmDone;
