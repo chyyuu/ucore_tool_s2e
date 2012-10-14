@@ -75,8 +75,8 @@ void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
   uint64_t ppPCB = esp + 4;
   UCorePCB* prev = parseUCorePCB(state, m_KeCurrentThread);
   UCorePCB* next = parseUCorePCB(state, ppPCB);
-  printUCorePCB(prev);
-  printUCorePCB(next);
+  //printUCorePCB(prev);
+  //printUCorePCB(next);
   onThreadSwitching.emit(state, prev, next, pc);
 }
 //Monitoring func set_proc_name
@@ -90,14 +90,14 @@ void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
   UCorePCB* proc = parseUCorePCB(state, ppPCB);
   proc->name = parseUCorePName(state, ppName);
   //for debug
-  printUCorePCB(proc);
+  //printUCorePCB(proc);
   onThreadCreating.emit(state, proc, pc);
 }
 //Monitoring func do_exit
 void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
   s2e()->getDebugStream() << "[UCoreMonitor]Thread exiting\n";
   UCorePCB* current = parseUCorePCB(state, m_KeCurrentThread);
-  printUCorePCB(current);
+  //printUCorePCB(current);
   onThreadExiting.emit(state, current, pc);
 }
 
@@ -224,6 +224,7 @@ UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
   memcpy(&(pcb->pid), block + PCB_PID_OFFSET, 4);
   memcpy(&(pcb->runs), block + PCB_RUNS_OFFSET, 4);
   memcpy(&(pcb->parentAddr), block + PCB_PARENT_OFFSET, 4);
+  pcb->pcb_addr = pPCB;
   return pcb;
 }
 uint64_t UCoreMonitor::parseUCorePPid(S2EExecutionState* state,

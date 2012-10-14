@@ -16,25 +16,22 @@ namespace s2e{
       UCoreProfiler(S2E *s2e): Plugin(s2e){}
       //members
       std::map<uint64_t, UCorePCB*> addr2PCB;
-
+      std::map<uint64_t, uint64_t> pid2addr;
       void initialize();
       //signal slots
-      void slotThreadSwitch(ExecutionSignal* signal,
-                          S2EExecutionState* state,
-                          uint64_t prevPid,
-                          uint64_t nextPid,
-                          uint64_t pc);
-      void slotThreadCreation(ExecutionSignal* signal,
-                            S2EExecutionState* state,
-                            UCorePCB* newThread,
+      void slotThreadSwitch(S2EExecutionState* state,
+                              uint64_t prevPid,
+                              uint64_t nextPid,
+                              uint64_t pc);
+      void slotThreadCreation(S2EExecutionState* state,
+                                UCorePCB* newThread,
+                                uint64_t pc);
+      void slotThreadExit(S2EExecutionState* state,
+                            uint64_t exitPid,
                             uint64_t pc);
-      void slotThreadExit(ExecutionSignal* signal,
-                        S2EExecutionState* state,
-                        uint64_t exitPid,
-                        uint64_t pc);
       private:
+
       UCorePCB* current;
-      std::map<uint32_t, UCorePCB*> threadMap;
       void disconnect(S2EExecutionState *state){
         return;
       }
