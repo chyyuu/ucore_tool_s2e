@@ -25,15 +25,16 @@ namespace plugins{
 #define PTSIZE 4096 * 1024
 #define NPTEENTRY 1024
 #define PGSIZE 4096
-#define VPTADDR 0xc011961c
-#define VPDADDR 0xc0119620
-#define PMMINITEXIT 0xc0100086
-#define S2EESPOFFSET 0x4
+//#define VPTADDR 0xc0116548
+//#define VPDADDR 0xc011654c
+//#define S2EESPOFFSET 0x4
 
 	S2E_DEFINE_PLUGIN(UCoreMemoryManagement, "MemoryManagement of UCore",
 			"UCoreMemoryManagement", "UCoreMonitor");
 	void UCoreMemoryManagement::initialize(){
 		printPc = s2e()->getConfig()->getInt(getConfigKey() + ".print_pgdir_pc");
+		vptaddr = s2e()->getConfig()->getInt(getConfigKey() + ".vptaddr");
+		vpdaddr = s2e()->getConfig()->getInt(getConfigKey() + ".vpdaddr");
 
 		((UCoreMonitor *)s2e()->getPlugin("UCoreMonitor"))->onFunctionTransition.connect(
 				sigc::mem_fun(*this, &UCoreMemoryManagement::sortByFname));
@@ -41,44 +42,35 @@ namespace plugins{
 		 s2e()->getCorePlugin()->onTranslateInstructionStart.connect(
 				sigc::mem_fun(*this, &UCoreMemoryManagement::print_pgdir));
 	}
-	/*	//for test
-	 *
-	 * void UCoreMemoryManagement::onTranslateInstruction(ExecutionSignal *signal,
-	 *  S2EExecutionState *state, TranslationBlock *tb, uint64 pc){
-	 *	count ++;
-	 *	if (count == 1000){
-	 *		s2e()->getDebugStream() << "###test 100!" << '\n';
-	 *		count = 0;
-	 *	}
-	} */
 
 	void UCoreMemoryManagement::sortByFname(ExecutionSignal *signal, S2EExecutionState *state,
 			string fname, uint64_t pc){
 		//s2e()->getDebugStream() << "#Function:" << fname << " received\n";
-		if (enable_paging == false){
-			uint32_t cr0;
-			cr0 = state->readCpuState(CPU_OFFSET(cr[0]), 8*sizeof(target_ulong));
-			if ((cr0 & 0x80000000) != 0)
-				enable_paging = true;
-		}
+
 		if (fname == "page_init")
 			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::onPmminitTransition));
 		else if (fname == "alloc_pages")
 			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getAllocPage));
 		else if (fname == "free_pages")
 			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getFreepageInfo));
-//		else if (fname == "default_check")
-//			s2e()->getDebugStream() << "!!!!!!!!!!\n";
+		else if (fname == "kmalloc")
+			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getKmallocSize));
+		else if (fname == "kmem_cache_alloc_one")
+			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getKmallocInfo));
 //		else
 //			signal->disconnect();
 	}
 
 	void UCoreMemoryManagement::onPmminitTransition(S2EExecutionState *state, uint64_t pc){
-//		s2e()->getDebugStream() << "#Function:page_init received\n";	//test
+
 		++pmmInitDone;
+
+//		char buf[9];
+//		sprintf(buf, "%08lx", pc);
+//		s2e()->getDebugStream() << buf << '\n';
+
 		if (pmmInitDone == 2){
 			onPmmDone.emit(state, pc);
-//			s2e()->getDebugStream() << "#####Memory:page created." << '\n';
 		}
 		else if (pmmInitDone > 2){
 			s2e()->getDebugStream() << "#####error pmmInit call/ret "
@@ -87,7 +79,6 @@ namespace plugins{
 	}
 
 	void UCoreMemoryManagement::getAllocPage(S2EExecutionState *state, uint64_t pc){
-//		s2e()->getDebugStream() << "#Function:alloc_pages received\n";
 		if (pmmInitDone == 2){
 			++allocPageRet;
 			if (allocPageRet == 2){
@@ -122,10 +113,9 @@ namespace plugins{
 				int allocPageSize = 0;
 				uint64_t pAddr = 0;
 
-//				for (int i = 0;i != 2; ++i){
 				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &pAddr, 4))
 					s2e()->getDebugStream() << "#####get esp fail\n";
-				pAddr += S2EESPOFFSET;
+				pAddr += 0x4;
 
 //				char buf[9];
 //				sprintf(buf, "%08lx", pAddr);
@@ -144,7 +134,6 @@ namespace plugins{
 	}
 
 	void UCoreMemoryManagement::getFreepageInfo(S2EExecutionState *state, uint64_t pc){
-//		s2e()->getDebugStream() << "#Function:free_pages received\n";
 		if (pmmInitDone == 2){
 			++freePageCall;
 			if (freePageCall == 1){
@@ -158,7 +147,7 @@ namespace plugins{
 				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &pAddr, 4))
 					s2e()->getDebugStream() << "#####get esp fail\n";
 				pAddr += 0x4;
-				pAddr += S2EESPOFFSET;
+				pAddr += 0x4;
 				if (enable_paging == false)
 					pAddr -= 0xc0000000;
 				if (!state->readMemoryConcrete(pAddr, &freePageSize, 4))
@@ -170,12 +159,6 @@ namespace plugins{
 //				s2e()->getDebugStream() << "#####pAddr:" << buf << "\n";
 //				sprintf(buf, "%08lx", pc);
 //				s2e()->getDebugStream() << "#####p:" << buf << "\n";
-
-//				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &pAddr, 4))
-//					s2e()->getDebugStream() << "#####get esp fail\n";
-//				pAddr += S2EESPOFFSET;
-//				if (pc >= 0x00010000 && pc <= 0x3fffffff)
-//					pAddr -= 0xc0000000;
 
 				pAddr -= 0x4;
 
@@ -202,11 +185,88 @@ namespace plugins{
 		}
 	}
 
+	void UCoreMemoryManagement::getKmallocSize(S2EExecutionState *state, uint64_t pc){
+		if (pmmInitDone == 2){
+			++kmallocSize;
+			if (kmallocSize == 1){
+				s2e()->getDebugStream() << "----------kmalloc_pages info BEGIN----------\n";
+				int kmallocSize = 0;
+				uint64_t kAddr = 0;
+
+				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &kAddr, 4))
+					s2e()->getDebugStream() << "#####get esp fail\n";
+				kAddr += 0x4;
+//				if (enable_paging == false)
+//					kAddr -= 0xc0000000;
+				if (!state->readMemoryConcrete(kAddr, &kmallocSize, 4))
+					s2e()->getDebugStream() << "#####get allocpage size fail\n";
+				s2e()->getDebugStream() << "#####kmalloc page size:" << kmallocSize << "\n";
+			}
+			else if (kmallocSize == 2){
+				uint64_t objAddr = 0;
+				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_EAX]), &objAddr, 4))
+									s2e()->getDebugStream() << "#####get allocpage address fail\n";
+				char buf[9];
+				sprintf(buf, "%08lx", objAddr);
+				s2e()->getDebugStream() << "#####objAddr:" << buf << '\n';
+//				kmallocSize = 0;	//enable print each kmalloc pagesize;
+				s2e()->getDebugStream() << "----------kmalloc_pages info END----------\n";
+			}
+		}
+	}
+
+	void UCoreMemoryManagement::getKmallocInfo(S2EExecutionState *state, uint64_t pc){
+		if (pmmInitDone == 2){
+			++kmallocInfo;
+			if (kmallocInfo == 1){
+				uint64_t kAddr = 0;
+//				char buf[9];
+//				sprintf(buf, "%08lx", pc);
+//				s2e()->getDebugStream() << "#####pc:" << buf << '\n';
+
+				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &kAddr, 4))
+					s2e()->getDebugStream() << "#####get esp fail\n";
+				kAddr += 0x4;
+				uint64_t kmemCacheAddr = 0;
+				if (!state->readMemoryConcrete(kAddr, &kmemCacheAddr, 4))
+					s2e()->getDebugStream() << "#####get allocpage size fail\n";
+				kmem_cache_t kmemCache;
+				if (!state->readMemoryConcrete(kmemCacheAddr, &kmemCache, sizeof(kmem_cache_t)))
+					s2e()->getDebugStream() << "#####get freepage struct fail\n";
+
+				s2e()->getDebugStream() << "kmem_cache_t objsize:" << kmemCache.objsize << '\n';
+
+				kAddr += 0x4;
+				uint64_t kmemSlabAddr = 0;
+				if (!state->readMemoryConcrete(kAddr, &kmemSlabAddr, 4))
+					s2e()->getDebugStream() << "#####get allocpage size fail\n";
+				slab_t kmemSlab;
+				if (!state->readMemoryConcrete(kmemSlabAddr, &kmemSlab, sizeof(slab_t)))
+					s2e()->getDebugStream() << "#####get freepage struct fail\n";
+
+				char buf[9];
+				sprintf(buf, "%x", kmemSlab.s_mem);
+				s2e()->getDebugStream() << "slab_t mem:" << buf << '\n';
+				s2e()->getDebugStream() << "slab_t free:" << kmemSlab.free << '\n';
+			}
+			else if (kmallocInfo == 2){
+//				kmallocInfo = 0;		//enable print each kmalloc info;
+			}
+		}
+	}
+
 	void UCoreMemoryManagement::print_pgdir(ExecutionSignal *signal,
 			 S2EExecutionState *state, TranslationBlock *tb, uint64 pc){
 		uint64_t vpc = pc;
 		if (enable_paging == false)
 			vpc += 0xc0000000;
+
+		if (enable_paging == false){
+			uint32_t cr0;
+			cr0 = state->readCpuState(CPU_OFFSET(cr[0]), 8*sizeof(target_ulong));
+			if ((cr0 & 0x80000000) != 0)
+				enable_paging = true;
+		}
 
 		if (vpc == printPc){
 			if (pmmInitDone != 2){
@@ -215,13 +275,16 @@ namespace plugins{
 			}
 
 			uint32_t *vpd, *vpt;
-			uint64_t vptaddr = VPTADDR;
+//			uint64_t vptaddr = VPTADDR;
+			if (enable_paging == false)
+				vptaddr -= 0xc0000000;
 			state->readMemoryConcrete(vptaddr, &vpt, 4);
-			uint64_t vpdaddr = VPDADDR;
+//			uint64_t vpdaddr = VPDADDR;
+			if (enable_paging == false)
+				vpdaddr -= 0xc0000000;
 			state->readMemoryConcrete(vpdaddr, &vpd, 4);
 			char buf1[9], buf2[9], buf3[9], buf4[9];
 
-//			if (++pmmInitDone == 1)
 			s2e()->getDebugStream() << "#####print_pgdir\n";
 			s2e()->getDebugStream() << "----------print_pgdir BEGIN----------\n";
 			uint32_t left, right = 0, perm;
@@ -268,7 +331,7 @@ namespace plugins{
 	    }
 	    uint64_t addr;
 	    uint32_t temp;
-	    while (start < right){// && !(table[start] & PTE_P)) {
+	    while (start < right){
 	    	addr = (uint64_t)&table[start];
 	    	state->readMemoryConcrete(addr, &temp, 4);
 	    	if (temp & PTE_P)
@@ -281,8 +344,8 @@ namespace plugins{
 	        }
 	        addr = (uint64_t)&table[start ++];
 	        state->readMemoryConcrete(addr, &temp, 4);
-	        int perm = temp & PTE_USER;//(table[start ++] & PTE_USER);
-	        while (start < right){// && (table[start] & PTE_USER) == perm) {
+	        int perm = temp & PTE_USER;
+	        while (start < right){
 	        	addr = (uint64_t)&table[start];
 	        	state->readMemoryConcrete(addr, &temp, 4);
 	        	if ((temp & PTE_USER) != perm)

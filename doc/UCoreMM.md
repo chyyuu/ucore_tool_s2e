@@ -62,3 +62,15 @@ pra_vaddr:0 <br>
 UCoreMM "use cr0 to detect if enable_paging"
 -------------------------
 使用cr0来判断是否已经启用分页机制。
+
+UCoreMM "print kmalloc alloc info(slab)"
+-------------------------
+基于slab算法获取kmalloc的信息，测试输出结果如下：
+----------kmalloc_pages info BEGIN----------
+ #####kmalloc page size:16
+kmem_cache_t objsize:32
+slab_t s_mem:c035d1e0
+slab_t free:0
+ #####objAddr:c035d1e0
+----------kmalloc_pages info END----------
+其中各项分别为ucore对应struct的各项
