@@ -20,7 +20,18 @@ using namespace s2e::plugins;
 S2E_DEFINE_PLUGIN(UCoreProfiler, "Profiler of UCore",
                     "UCoreProfiler", "UCoreMonitor");
 
-UCoreProfiler::~UCoreProfiler(){}
+UCoreProfiler::~UCoreProfiler(){
+}
 
 void UCoreProfiler::initialize(){
+  UCoreMonitor* monitor = static_cast<UCoreMonitor*>
+    (s2e()->getPlugin("UCoreMonitor"));
+  assert(monitor);
+  monitor->onThreadSwitching.
+    connect(sigc::mem_fun(*this, &UCoreProfiler::slotThreadSwitch));
+  monitor->onThreadCreating.
+    connect(sigc::mem_fun(*this, &UCoreProfiler::slotThreadSwitch));
+  monitor->onThreadExiting.
+    connect(sigc::mem_fun(*this, &UCoreProfiler::slotThreadSwitch));
+
 }

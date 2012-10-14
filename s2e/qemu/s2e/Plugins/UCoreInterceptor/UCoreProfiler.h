@@ -1,11 +1,12 @@
 #ifndef _UCORE_PROFILER_H
 #define _UCORE_PROFILER_H
 
-#include "UCorePCB.h"
 #include <s2e/Plugin.h>
 #include <s2e/Plugins/CorePlugin.h>
 #include <s2e/S2EExecutionState.h>
 #include <map>
+
+#include "UCoreMonitor.h"
 
 namespace s2e{
   namespace plugins{
@@ -13,6 +14,9 @@ namespace s2e{
       S2E_PLUGIN
       public:
       UCoreProfiler(S2E *s2e): Plugin(s2e){}
+      //members
+      std::map<uint64_t, UCorePCB*> addr2PCB;
+
       void initialize();
       //signal slots
       void slotThreadSwitch(ExecutionSignal* signal,
