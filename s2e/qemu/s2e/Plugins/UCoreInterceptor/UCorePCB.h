@@ -24,10 +24,17 @@ namespace s2e {
 
   typedef struct _UCorePCB{
     enum proc_state state;
+<<<<<<< HEAD
     uint64_t pid;
     uint64_t runs;
     uint64_t parentAddr;
     uint64_t pcb_addr;
+=======
+    uint32_t pid;
+
+    uint32_t runs;
+    uint32_t parentAddr;
+>>>>>>> master
     std::string* name;
   } UCorePCB;
 }
