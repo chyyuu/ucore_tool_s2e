@@ -94,8 +94,6 @@ namespace s2e{
                               uint64_t addr);
       std::string* parseUCorePName(S2EExecutionState *state,
                                   uint64_t addr);
-      uint64_t parseUCorePPid(S2EExecutionState *state,
-                               uint64_t addr);
       void printUCorePCB(UCorePCB* ucorePCB);
       void notifyLoadForAllThreads(S2EExecutionState* state);
       uint64_t getKernelStart() const;

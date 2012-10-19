@@ -206,7 +206,6 @@ bool UCoreMonitor::getCurrentStack(S2EExecutionState *s, uint64_t *base,
 }
 
 //Nuk's parsing area, dirty code's all here ;)
-
 UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
                                  uint64_t addr){
   uint64_t pPCB = 0;
@@ -227,22 +226,6 @@ UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
   pcb->pcb_addr = pPCB;
   return pcb;
 }
-uint64_t UCoreMonitor::parseUCorePPid(S2EExecutionState* state,
-                                  uint64_t addr){
-  uint64_t pPCB = 0;
-  if(!state->readMemoryConcrete(addr, (void*)(&pPCB), 4)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
-    return NULL;
-  }
-  char block[PCB_SIZE];
-  if(!state->readMemoryConcrete(pPCB, block, PCB_SIZE)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get PCB error!\n";
-    return NULL;
-  }
-  uint64_t ret = 0;
-  memcpy(&ret, block + PCB_PID_OFFSET, 4);
-  return ret;
-}
 std::string* UCoreMonitor::parseUCorePName(S2EExecutionState *state,
                                    uint64_t addr){
   char block[PCB_NAME_LEN];
@@ -262,8 +245,6 @@ std::string* UCoreMonitor::parseUCorePName(S2EExecutionState *state,
   std::string* result = new std::string(block);
   return result;
 }
-
-
 void UCoreMonitor::parseSystemMapFile(){
   ifstream system_map_stream;
   system_map_stream.open(system_map_file.c_str());
