@@ -1,7 +1,7 @@
 #ifndef _UCORE_THREAD_DESCRIPTOR_H_
-
 #define _UCORE_THREAD_DESCRIPTOR_H_
 
+#define CURRENT_THREAD_SYMBOL "current"
 #define PCB_SIZE                    120
 #define PCB_STATE_OFFSET            0
 #define PCB_PID_OFFSET              4

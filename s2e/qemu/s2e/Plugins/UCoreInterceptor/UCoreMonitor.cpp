@@ -17,6 +17,7 @@ extern "C" {
 #include <s2e/ConfigFile.h>
 #include <s2e/Utils.h>
 
+
 using namespace std;
 using namespace s2e;
 using namespace s2e::plugins;
@@ -27,8 +28,8 @@ UCoreMonitor::~UCoreMonitor(){
 
 void UCoreMonitor::initialize(){
   //Read kernel Version Address
-  m_KernelBase = s2e()->getConfig()->getInt(getConfigKey() + ".kernelBase");
-  m_KernelEnd = s2e()->getConfig()->getInt(getConfigKey() + ".kernelEnd");
+  //m_KernelBase = s2e()->getConfig()->getInt(getConfigKey() + ".kernelBase");
+  //m_KernelEnd = s2e()->getConfig()->getInt(getConfigKey() + ".kernelEnd");
   m_MonitorFunction = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorFunction");
   m_MonitorThreads = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorThreads");
 
@@ -36,10 +37,23 @@ void UCoreMonitor::initialize(){
   bool ok;
   system_map_file = s2e()->getConfig()->getString(getConfigKey() + ".system_map_file", "", &ok);
   if(!ok){
-    s2e()->getWarningsStream() << "No System.map file provided. System.map is needed for UCoreMonitor to work properly. Quit.\n";
+    s2e()->getWarningsStream() << "No kernel.sym file provided. System.map is needed for UCoreMonitor to work properly. Quit.\n";
     exit(-1);
   }
   parseSystemMapFile();
+
+  kernel_ld_file = s2e()->getConfig()->getString(getConfigKey() + ".kernel_ld_file", "", &ok);
+  if(!ok){
+    s2e()->getWarningsStream() << "No kernel.ld file provided. System.map is needed for UCoreMonitor to work properly. Quit.\n";
+    exit(-1);
+  }
+  parseKernelLd();
+
+  //Get STAB section address
+  m_StabStart = sMap[STAB_BEGIN_ADDR_SYMBOL];
+  m_StabEnd = sMap[STAB_END_ADDR_SYMBOL];
+  m_StabStrStart = sMap[STABSTR_BEGIN_ADDR_SYMBOL];
+  m_StabStrEnd = sMap[STABSTR_END_ADDR_SYMBOL];
   //connect Signals
   if(m_MonitorFunction){
     s2e()->getCorePlugin()->onTranslateBlockEnd
@@ -245,6 +259,22 @@ std::string* UCoreMonitor::parseUCorePName(S2EExecutionState *state,
   std::string* result = new std::string(block);
   return result;
 }
+
+void UCoreMonitor::parseKernelLd(){
+  ifstream kernel_ld_stream;
+  kernel_ld_stream.open(kernel_ld_file.c_str());
+  if(!kernel_ld_stream){
+    s2e()->getWarningsStream() << "Unable to open file"
+                               << system_map_file << ".\n";
+    exit(1);
+  }
+  char line[255];
+  while(kernel_ld_stream){
+    kernel_ld_stream.getline(line, 255);
+  }
+  m_KernelBase = 0xc0100000;
+}
+
 void UCoreMonitor::parseSystemMapFile(){
   ifstream system_map_stream;
   system_map_stream.open(system_map_file.c_str());

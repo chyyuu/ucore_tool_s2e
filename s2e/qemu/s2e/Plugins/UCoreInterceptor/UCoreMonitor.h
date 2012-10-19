@@ -1,6 +1,7 @@
 #ifndef _UCORE_MONITOR_H
 #define _UCORE_MONITOR_H
 
+#include "UCoreStab.h"
 #include "UCorePCB.h"
 #include <s2e/Plugin.h>
 #include <s2e/Plugins/CorePlugin.h>
@@ -15,9 +16,6 @@
 
 namespace s2e{
   namespace plugins{
-
-    class UCoreUserModeEvent;
-    class UCoreKernelModeEvent;
 
     class UCoreMonitor : public OSMonitor{
       S2E_PLUGIN
@@ -42,14 +40,9 @@ namespace s2e{
       }
 
     private:
-
-      bool m_UserMode, m_KernelMode;
+      //mointor switch
       bool m_MonitorThreads;
       bool m_MonitorFunction;
-      uint64_t m_KernelBase;
-      uint64_t m_KernelEnd;
-
-      std::vector<uint64_t> callStack;
 
       //Symbol table
       typedef struct __symbol_struct{
@@ -59,13 +52,21 @@ namespace s2e{
       } symbol_struct;
       typedef std::map<uint64_t, symbol_struct> SymbolTable;
       typedef std::map<std::string, uint64_t> SymbolMap;
+
       std::string system_map_file;
+      std::string kernel_ld_file;
+
       SymbolMap sMap;
       SymbolTable sTable;
 
       //Kernel Addresses
       uint64_t m_KeCurrentThread;
-
+      //STAB Section Address
+      uint64_t m_StabStart;
+      uint64_t m_StabEnd;
+      uint64_t m_StabStrStart;
+      uint64_t m_StabStrEnd;
+      bool first;
       //Signal connectors
       void onPageDirectoryChange(S2EExecutionState *state,
                                  uint64_t previous,
@@ -90,6 +91,7 @@ namespace s2e{
 
       // Meta functions starts here
       void parseSystemMapFile();
+      void parseKernelLd();
       UCorePCB* parseUCorePCB(S2EExecutionState *state,
                               uint64_t addr);
       std::string* parseUCorePName(S2EExecutionState *state,
