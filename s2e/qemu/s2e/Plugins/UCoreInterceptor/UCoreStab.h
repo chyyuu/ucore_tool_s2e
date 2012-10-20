@@ -1,6 +1,8 @@
 #ifndef _UCORE_STAB_DESCRIPTOR_H_
 #define _UCORE_STAB_DESCRIPTOR_H_
 
+/* SIZEOF UCoreStab : 12 */
+
 #define STAB_BEGIN_ADDR_SYMBOL "__STAB_BEGIN__"
 #define STAB_END_ADDR_SYMBOL "__STAB_END__"
 #define STABSTR_BEGIN_ADDR_SYMBOL "__STABSTR_BEGIN__"
@@ -41,7 +43,7 @@ namespace s2e{
     uint8_t n_type;
     uint8_t n_other;
     uint16_t n_desc;
-    uint32_t v_value;
+    uint32_t n_value; //pointer to the value
   } UCoreStab;
 }
 #endif

@@ -3,6 +3,7 @@
 
 #include "UCoreStab.h"
 #include "UCorePCB.h"
+#include "UCoreFunc.h"
 #include <s2e/Plugin.h>
 #include <s2e/Plugins/CorePlugin.h>
 #include <s2e/S2EExecutionState.h>
@@ -23,15 +24,20 @@ namespace s2e{
       UCoreMonitor(S2E *s2e) :OSMonitor(s2e){}
       virtual ~UCoreMonitor();
       void initialize();
-
+      /*-------------signals------------------*/
+      /* For funtion monitor */
       typedef sigc::signal<void, ExecutionSignal *, S2EExecutionState*, std::string, uint64_t> TransitionSignal;
       TransitionSignal onFunctionTransition;
       TransitionSignal onFunctionCalling;
+      TransitionSignal onFunctionReturning;
+
+      /* for thread monitor */
       typedef sigc::signal<void, S2EExecutionState*, UCorePCB*, UCorePCB*, uint64_t> ThreadSwitchSignal;
       typedef sigc::signal<void, S2EExecutionState*, UCorePCB*, uint64_t> ThreadSignal;
       ThreadSwitchSignal onThreadSwitching;
       ThreadSignal onThreadCreating;
       ThreadSignal onThreadExiting;
+      /*----------------------------------*/
 
       void slotCall(S2EExecutionState* state, uint64_t pc);
       void slotRet(S2EExecutionState* state, uint64_t pc);
@@ -56,10 +62,17 @@ namespace s2e{
       std::string system_map_file;
       std::string kernel_ld_file;
 
+      //UCore System Map
       SymbolMap sMap;
       SymbolTable sTable;
+      //Stab Array
+      UCoreStab* stab_array;
+      UCoreStab* stab_array_end;
+      char* stabstr_array;
+      char* stabstr_array_end;
 
       //Kernel Addresses
+      uint64_t m_KernelBase;
       uint64_t m_KeCurrentThread;
       //STAB Section Address
       uint64_t m_StabStart;
@@ -67,6 +80,7 @@ namespace s2e{
       uint64_t m_StabStrStart;
       uint64_t m_StabStrEnd;
       bool first;
+
       //Signal connectors
       void onPageDirectoryChange(S2EExecutionState *state,
                                  uint64_t previous,
@@ -76,13 +90,8 @@ namespace s2e{
                                bool, uint64_t);
       void onTBJumpStart (ExecutionSignal *signal, S2EExecutionState *state,
                           TranslationBlock *tb, uint64_t, int jump_type);
-      //User Mode Events
-      // void slotMonitorProcessSwitch(S2EExecutionState *state,
-      //                               uint64_t pc);
-      // void slotUmCatchProcessTermination(S2EExecutionState *state,
-      //                                    uint64_t pc);
 
-      //Kernel Mode Events
+      // signal slot functions
       void slotFunctionCalling(ExecutionSignal *signal, S2EExecutionState *state
                                ,std::string fname, uint64_t pc);
       void slotKmThreadInit(S2EExecutionState *state, uint64_t pc);
@@ -90,13 +99,25 @@ namespace s2e{
       void slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc);
 
       // Meta functions starts here
+      // parse files
       void parseSystemMapFile();
       void parseKernelLd();
+      // parse function related struct
+      void parseUCoreStab(S2EExecutionState *state);
+      bool parseUCoreFunc(uint64_t addr, UCoreFunc* func);
+      void stab_binsearch(UCoreStab* stabs, int* region_left,
+                          int* region_right, int type, uint64_t addr);
+      //parse thread related struct
       UCorePCB* parseUCorePCB(S2EExecutionState *state,
                               uint64_t addr);
       std::string* parseUCorePName(S2EExecutionState *state,
                                   uint64_t addr);
+      //print functions
       void printUCorePCB(UCorePCB* ucorePCB);
+      void printUCoreStabs();
+      void printUCoreFunc(UCoreFunc func);
+      //Meta functions ends here
+
       void notifyLoadForAllThreads(S2EExecutionState* state);
       uint64_t getKernelStart() const;
       uint64_t getKeInitThread() const;
