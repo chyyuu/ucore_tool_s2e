@@ -57,6 +57,10 @@ namespace plugins{
 			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getKmallocSize));
 		else if (fname == "kmem_cache_alloc_one")
 			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getKmallocInfo));
+		else if (fname == "kfree")
+			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getKfreeobjp));
+		else if (fname == "kmem_cache_free_one")
+			signal->connect(sigc::mem_fun(*this, &UCoreMemoryManagement::getKfreeInfo));
 //		else
 //			signal->disconnect();
 	}
@@ -80,34 +84,8 @@ namespace plugins{
 
 	void UCoreMemoryManagement::getAllocPage(S2EExecutionState *state, uint64_t pc){
 		if (pmmInitDone == 2){
-			++allocPageRet;
-			if (allocPageRet == 2){
-
-				uint64_t pageAddr = 0;
-				Page apage;
-
-				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_EAX]), &pageAddr, 4))
-					s2e()->getDebugStream() << "#####get allocpage address fail\n";
-				if (enable_paging == false)
-					pageAddr -= 0xc0000000;
-
-//				char buf[9];
-//				sprintf(buf, "%08lx", pageAddr);
-//				s2e()->getDebugStream() << "#####pageAddr:" << buf << '\n';
-
-				if (!state->readMemoryConcrete(pageAddr, &apage, sizeof(Page)))
-					s2e()->getDebugStream() << "#####get allocpage struct fail\n";
-				print_pginfo(&apage);
-
-				s2e()->getDebugStream() << "----------alloc_pages info END----------\n";
-
-//				allocPageRet = 0;		//enable print each alloc_page
-
-//				sprintf(buf, "%08lx", pc);
-//				s2e()->getDebugStream() << "#####pc:" << buf << '\n';
-//				print_pgdir(NULL, state, NULL, printPc);
-			}
-			else if (allocPageRet == 1){
+			++allocPageCall;
+			if (allocPageCall == 1){
 				s2e()->getDebugStream() << "----------alloc_pages info BEGIN----------\n";
 
 				int allocPageSize = 0;
@@ -129,6 +107,28 @@ namespace plugins{
 					s2e()->getDebugStream() << "#####get allocpage size fail\n";
 				s2e()->getDebugStream() << "#####alloc page size:" << allocPageSize << "\n";
 //				}
+			}
+			else if (allocPageCall == 2){
+
+				uint64_t pageAddr = 0;
+				Page apage;
+
+				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_EAX]), &pageAddr, 4))
+					s2e()->getDebugStream() << "#####get allocpage address fail\n";
+				if (enable_paging == false)
+					pageAddr -= 0xc0000000;
+
+//				char buf[9];
+//				sprintf(buf, "%08lx", pageAddr);
+//				s2e()->getDebugStream() << "#####pageAddr:" << buf << '\n';
+
+				if (!state->readMemoryConcrete(pageAddr, &apage, sizeof(Page)))
+					s2e()->getDebugStream() << "#####get Page struct fail\n";
+				print_pginfo(&apage);
+
+				s2e()->getDebugStream() << "----------alloc_pages info END----------\n";
+
+//				allocPageCall = 0;		//enable print each alloc_page
 			}
 		}
 	}
@@ -167,7 +167,7 @@ namespace plugins{
 				if (enable_paging == false)
 					fAddr -= 0xc0000000;
 				if (!state->readMemoryConcrete(fAddr, &fpage, sizeof(Page)))
-					s2e()->getDebugStream() << "#####get freepage struct fail\n";
+					s2e()->getDebugStream() << "#####get Page struct fail\n";
 
 //				char buf[9];
 //				sprintf(buf, "%08lx", pAddr);
@@ -187,9 +187,9 @@ namespace plugins{
 
 	void UCoreMemoryManagement::getKmallocSize(S2EExecutionState *state, uint64_t pc){
 		if (pmmInitDone == 2){
-			++kmallocSize;
-			if (kmallocSize == 1){
-				s2e()->getDebugStream() << "----------kmalloc_pages info BEGIN----------\n";
+			++kmallocCall;
+			if (kmallocCall == 1){
+				s2e()->getDebugStream() << "----------kmalloc info BEGIN----------\n";
 				int kmallocSize = 0;
 				uint64_t kAddr = 0;
 
@@ -199,26 +199,27 @@ namespace plugins{
 //				if (enable_paging == false)
 //					kAddr -= 0xc0000000;
 				if (!state->readMemoryConcrete(kAddr, &kmallocSize, 4))
-					s2e()->getDebugStream() << "#####get allocpage size fail\n";
+					s2e()->getDebugStream() << "#####get kmalloc size fail\n";
 				s2e()->getDebugStream() << "#####kmalloc page size:" << kmallocSize << "\n";
 			}
-			else if (kmallocSize == 2){
+			else if (kmallocCall == 2){
 				uint64_t objAddr = 0;
 				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_EAX]), &objAddr, 4))
-									s2e()->getDebugStream() << "#####get allocpage address fail\n";
+					s2e()->getDebugStream() << "#####get kmalloc objp address fail\n";
 				char buf[9];
 				sprintf(buf, "%08lx", objAddr);
 				s2e()->getDebugStream() << "#####objAddr:" << buf << '\n';
-//				kmallocSize = 0;	//enable print each kmalloc pagesize;
-				s2e()->getDebugStream() << "----------kmalloc_pages info END----------\n";
+				s2e()->getDebugStream() << "----------kmalloc info END----------\n";
+
+//				kmallocCall = 0;	//enable print each kmalloc pagesize;
 			}
 		}
 	}
 
 	void UCoreMemoryManagement::getKmallocInfo(S2EExecutionState *state, uint64_t pc){
 		if (pmmInitDone == 2){
-			++kmallocInfo;
-			if (kmallocInfo == 1){
+			++kmallocInfoCall;
+			if (kmallocInfoCall == 1){
 				uint64_t kAddr = 0;
 //				char buf[9];
 //				sprintf(buf, "%08lx", pc);
@@ -229,31 +230,98 @@ namespace plugins{
 				kAddr += 0x4;
 				uint64_t kmemCacheAddr = 0;
 				if (!state->readMemoryConcrete(kAddr, &kmemCacheAddr, 4))
-					s2e()->getDebugStream() << "#####get allocpage size fail\n";
+					s2e()->getDebugStream() << "#####get kmem_cache_t addr fail\n";
 				kmem_cache_t kmemCache;
 				if (!state->readMemoryConcrete(kmemCacheAddr, &kmemCache, sizeof(kmem_cache_t)))
-					s2e()->getDebugStream() << "#####get freepage struct fail\n";
+					s2e()->getDebugStream() << "#####get kmem_cache_t struct fail\n";
 
 				s2e()->getDebugStream() << "kmem_cache_t objsize:" << kmemCache.objsize << '\n';
 
 				kAddr += 0x4;
 				uint64_t kmemSlabAddr = 0;
 				if (!state->readMemoryConcrete(kAddr, &kmemSlabAddr, 4))
-					s2e()->getDebugStream() << "#####get allocpage size fail\n";
+					s2e()->getDebugStream() << "#####get slab_t addr fail\n";
 				slab_t kmemSlab;
 				if (!state->readMemoryConcrete(kmemSlabAddr, &kmemSlab, sizeof(slab_t)))
-					s2e()->getDebugStream() << "#####get freepage struct fail\n";
+					s2e()->getDebugStream() << "#####get slab_t struct fail\n";
 
 				char buf[9];
 				sprintf(buf, "%x", kmemSlab.s_mem);
 				s2e()->getDebugStream() << "slab_t mem:" << buf << '\n';
 				s2e()->getDebugStream() << "slab_t free:" << kmemSlab.free << '\n';
 			}
-			else if (kmallocInfo == 2){
-//				kmallocInfo = 0;		//enable print each kmalloc info;
+			else if (kmallocInfoCall == 2){
+//				kmallocInfoCall = 0;		//enable print each kmalloc info;
 			}
 		}
 	}
+
+	void UCoreMemoryManagement::getKfreeobjp(S2EExecutionState *state, uint64_t pc){
+		if (pmmInitDone == 2){
+			++kfreeCall;
+			if (kfreeCall == 1){
+				s2e()->getDebugStream() << "----------kfree info BEGIN----------\n";
+				uint64_t kfreeobjp = 0;
+				uint64_t kAddr = 0;
+
+				if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &kAddr, 4))
+					s2e()->getDebugStream() << "#####get esp fail\n";
+				kAddr += 0x4;
+//				if (enable_paging == false)
+//					kAddr -= 0xc0000000;
+				if (!state->readMemoryConcrete(kAddr, &kfreeobjp, 4))
+					s2e()->getDebugStream() << "#####get kfree objp addr fail\n";
+				char buf[9];
+				sprintf(buf, "%08lx", kfreeobjp);
+				s2e()->getDebugStream() << "#####kfree objp addr:" << buf << "\n";
+			}
+			else if (kfreeCall == 2){
+				s2e()->getDebugStream() << "----------kfree info END----------\n";
+
+//				kfreeCall = 0;	//enable print each kmalloc pagesize;
+			}
+		}
+	}
+
+	void UCoreMemoryManagement::getKfreeInfo(S2EExecutionState *state, uint64_t pc){
+			if (pmmInitDone == 2){
+				++kfreeInfoCall;
+				if (kfreeInfoCall == 1){
+					uint64_t kAddr = 0;
+	//				char buf[9];
+	//				sprintf(buf, "%08lx", pc);
+	//				s2e()->getDebugStream() << "#####pc:" << buf << '\n';
+
+					if (!state->readCpuRegisterConcrete(CPU_OFFSET(regs[R_ESP]), &kAddr, 4))
+						s2e()->getDebugStream() << "#####get esp fail\n";
+					kAddr += 0x4;
+					uint64_t kmemCacheAddr = 0;
+					if (!state->readMemoryConcrete(kAddr, &kmemCacheAddr, 4))
+						s2e()->getDebugStream() << "#####get kmem_cache_t addr fail\n";
+					kmem_cache_t kmemCache;
+					if (!state->readMemoryConcrete(kmemCacheAddr, &kmemCache, sizeof(kmem_cache_t)))
+						s2e()->getDebugStream() << "#####get kmem_cache_t struct fail\n";
+
+					s2e()->getDebugStream() << "kmem_cache_t objsize:" << kmemCache.objsize << '\n';
+
+					kAddr += 0x4;
+					uint64_t kmemSlabAddr = 0;
+					if (!state->readMemoryConcrete(kAddr, &kmemSlabAddr, 4))
+						s2e()->getDebugStream() << "#####get slab_t addr fail\n";
+					slab_t kmemSlab;
+					if (!state->readMemoryConcrete(kmemSlabAddr, &kmemSlab, sizeof(slab_t)))
+						s2e()->getDebugStream() << "#####get slab_t struct fail\n";
+
+					char buf[9];
+					sprintf(buf, "%x", kmemSlab.s_mem);
+					s2e()->getDebugStream() << "slab_t mem:" << buf << '\n';
+					s2e()->getDebugStream() << "slab_t free:" << kmemSlab.free << '\n';
+				}
+				else if (kfreeInfoCall == 2){
+	//				kfreeInfoCall = 0;		//enable print each kmalloc info;
+				}
+			}
+		}
 
 	void UCoreMemoryManagement::print_pgdir(ExecutionSignal *signal,
 			 S2EExecutionState *state, TranslationBlock *tb, uint64 pc){
