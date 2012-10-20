@@ -22,7 +22,7 @@
  * THE SOFTWARE.
  */
 #include <SDL/SDL.h>
-#include <SDL_thread.h>
+#include <SDL/SDL_thread.h>
 #include "qemu-common.h"
 #include "audio.h"
 

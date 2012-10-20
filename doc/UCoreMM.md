@@ -65,12 +65,32 @@ UCoreMM "use cr0 to detect if enable_paging"
 
 UCoreMM "print kmalloc alloc info(slab)"
 -------------------------
-基于slab算法获取kmalloc的信息，测试输出结果如下：
-----------kmalloc_pages info BEGIN----------
- #####kmalloc page size:16
-kmem_cache_t objsize:32
-slab_t s_mem:c035d1e0
-slab_t free:0
- #####objAddr:c035d1e0
-----------kmalloc_pages info END----------
+基于slab算法获取kmalloc的信息，测试输出结果如下：  
+----------kmalloc_pages info BEGIN----------  
+ #####kmalloc page size:16  
+kmem_cache_t objsize:32  
+slab_t s_mem:c035d1e0  
+slab_t free:0  
+ #####objAddr:c035d1e0  
+----------kmalloc_pages info END----------  
 其中各项分别为ucore对应struct的各项
+
+UCoreMM "print kfree info(slab) and write Tutorial for ucore_tool_s2e in README.md"
+--------------------------
+基于slab算法获取kfree的信息，测试输出结果如下：  
+----------kmalloc info BEGIN----------  
+ #####kmalloc page size:16  
+kmem_cache_t objsize:32  
+slab_t mem:c035d1e0  
+slab_t free:0  
+ #####objAddr:c035d1e0  
+----------kmalloc info END----------  
+----------kfree info BEGIN----------  
+ #####kfree objp addr:c035d1e0  
+kmem_cache_t objsize:32  
+slab_t mem:c035d1e0  
+slab_t free:2  
+----------kfree info END----------  
+同时输出kmalloc信息，方便观察kfree的正确性。
+
+在根目录的README.md中写了Tutorial for ucore_tool_s2e

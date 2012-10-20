@@ -53,10 +53,12 @@ namespace plugins{
 		S2E_PLUGIN
 	private:
 			int pmmInitDone;
-			int allocPageRet;
+			int allocPageCall;
 			int freePageCall;
-			int kmallocSize;
-			int kmallocInfo;
+			int kmallocCall;
+			int kmallocInfoCall;
+			int kfreeCall;
+			int kfreeInfoCall;
 			Page *allocpage;
 			kmem_cache_t *kmallocCache;
 			slab_t *kmallocSlab;
@@ -67,7 +69,8 @@ namespace plugins{
 			uint64_t vpdaddr;
 	public:
 		UCoreMemoryManagement(S2E *s2e) :Plugin(s2e), pmmInitDone(0),
-			allocPageRet(0), freePageCall(0), kmallocSize(0), kmallocInfo(0), allocpage(NULL), enable_paging(false){}
+			allocPageCall(0), freePageCall(0), kmallocCall(0), kmallocInfoCall(0),
+			kfreeCall(0), kfreeInfoCall(0),	allocpage(NULL), enable_paging(false){}
 		void initialize();
 		typedef sigc::signal<void, S2EExecutionState*, uint64_t> PmmSignal;
 		PmmSignal onPmmDone;
@@ -89,6 +92,12 @@ namespace plugins{
 
 		// get kmalloc page info
 		void getKmallocInfo(S2EExecutionState *state, uint64_t pc);
+
+		// get kmalloc page size
+		void getKfreeobjp(S2EExecutionState *state, uint64_t pc);
+
+		// get kmalloc page info
+		void getKfreeInfo(S2EExecutionState *state, uint64_t pc);
 
 		// print Pagedir
 		void print_pgdir(ExecutionSignal *signal,

@@ -23,7 +23,7 @@ pluginsConfig.UCoreMonitor = {
    kernelBase  = 0xc0100000,
    kernelEnd = 0xc01000ff,
    MonitorFunction = true,
-   system_map_file = "/home/fwl/s2e/build/lab8/obj/kernel.sym"
+   system_map_file = "/home/fwl/ucore/ucore_tool_s2e/build/lab8/obj/kernel.sym"
 }
 
 pluginsConfig.UCoreMemoryManagement = {
