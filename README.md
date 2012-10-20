@@ -42,7 +42,7 @@ Here is the code directory tree of my s2e project.
     | ./wiki		// wiki
     | ./config		// config files
 
-## How to solve compile errors 
+## How to solve compile errors
 
  * MiniSat/Solve error
 
@@ -64,7 +64,7 @@ to
 
 Run the following commands under ucore_tool_s2e directory,
 
-    $ cd build/qemu-release/i386-s2e-softmmu/s2e/Plugins  
+    $ cd build/qemu-release/i386-s2e-softmmu/s2e/Plugins
     $ mkdir UCoreInterceptor
 
 then run "make" command under ucore_tool_s2e/build directory.
@@ -75,49 +75,49 @@ then run "make" command under ucore_tool_s2e/build directory.
 
  * Find the line start with "QEMUOPTS",
 
-    QEMUOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback  
-    
-    .PHONY: qemu qemu-nox debug debug-nox monitor  
-    qemu: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)  
-	$(V)$(QEMU) -parallel stdio $(QEMUOPTS) -serial null  
-    
-    qemu-nox: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)  
-	$(V)$(QEMU) -serial mon:stdio $(QEMUOPTS) -nographic  
-    
-    monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)  
-	$(V)$(QEMU) -monitor stdio $(QEMUOPTS) -serial null  
-
- * Copy these lines like the follow ones and use your_own_path in "S2E" and "-s2e-config-file".
-
-    S2E :=	/home/fwl/ucore/ucore_tool_s2e/build/qemu-release/i386-s2e-softmmu/qemu-system-i386  
-    
-    S2EOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback \  
-	-s2e-config-file /home/fwl/ucore/ucore_tool_s2e/config/ucoreconfig.lua -s2e-verbose  
-    
-    s2e: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)  
-	$(V)$(S2E) -parallel stdio $(S2EOPTS) -serial null  
-    QEMUOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback 
+    QEMUOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback
 
     .PHONY: qemu qemu-nox debug debug-nox monitor
     qemu: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
-	$(V)$(QEMU) -parallel stdio $(QEMUOPTS) -serial null
+        $(V)$(QEMU) -parallel stdio $(QEMUOPTS) -serial null
 
     qemu-nox: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
-	$(V)$(QEMU) -serial mon:stdio $(QEMUOPTS) -nographic
+        $(V)$(QEMU) -serial mon:stdio $(QEMUOPTS) -nographic
 
     monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
-	$(V)$(QEMU) -monitor stdio $(QEMUOPTS) -serial null
+        $(V)$(QEMU) -monitor stdio $(QEMUOPTS) -serial null
+<<<<<<< HEAD
 
  * Copy these lines like the follow ones and use your_own_path in "S2E" and "-s2e-config-file".
 
     S2E :=	/home/fwl/ucore/ucore_tool_s2e/build/qemu-release/i386-s2e-softmmu/qemu-system-i386
 
     S2EOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback \
-		-s2e-config-file /home/fwl/ucore/ucore_tool_s2e/config/ucoreconfig.lua -s2e-verbose
+        -s2e-config-file /home/fwl/ucore/ucore_tool_s2e/config/ucoreconfig.lua -s2e-verbose
 
     s2e: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
-	$(V)$(S2E) -parallel stdio $(S2EOPTS) -serial null
->>>>>>> print kfree info(slab) and write Tutorial for ucore_tool_s2e in README.md
+        $(V)$(S2E) -parallel stdio $(S2EOPTS) -serial null
+    QEMUOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback
+
+    .PHONY: qemu qemu-nox debug debug-nox monitor
+    qemu: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+        $(V)$(QEMU) -parallel stdio $(QEMUOPTS) -serial null
+
+    qemu-nox: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+        $(V)$(QEMU) -serial mon:stdio $(QEMUOPTS) -nographic
+
+    monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
+        $(V)$(QEMU) -monitor stdio $(QEMUOPTS) -serial null
+
+ * Copy these lines like the follow ones and use your_own_path in "S2E" and "-s2e-config-file".
+
+    S2E :=	/home/fwl/ucore/ucore_tool_s2e/build/qemu-release/i386-s2e-softmmu/qemu-system-i386
+
+    S2EOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback \
+                -s2e-config-file /home/fwl/ucore/ucore_tool_s2e/config/ucoreconfig.lua -s2e-verbose
+
+    s2e: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+        $(V)$(S2E) -parallel stdio $(S2EOPTS) -serial null
 
 ## modify s2e config file
 
@@ -125,7 +125,7 @@ Ucore_tool_s2e use the file "kernel.sym" which is compiled from ucore.
 
  * Make ucore lab(suppose the directory tree as default),
 
-    $ cd test/lab4  
+    $ cd test/lab4
     $ make
 
 then you have "kernel.sym" file in the "obj" directory.
@@ -136,7 +136,7 @@ then you have "kernel.sym" file in the "obj" directory.
 
 Run the following commands under ucore_tool_s2e directory.
 
-    $ cd test/lab4  
+    $ cd test/lab4
     $ make s2e
 
 The output files will be in "s2e-last" directory.
