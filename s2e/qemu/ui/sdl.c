@@ -26,7 +26,7 @@
 #undef WIN32_LEAN_AND_MEAN
 
 #include <SDL/SDL.h>
-#include <SDL_syswm.h>
+#include <SDL/SDL_syswm.h>
 
 #include "qemu-common.h"
 #include "console.h"
