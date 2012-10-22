@@ -176,14 +176,14 @@ void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
 //slot ret inst
 void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
 
-  UCoreFunc currentFunc;
-  parseUCoreFunc(pc, &currentFunc);
-  printUCoreFunc(currentFunc);
+  //UCoreFunc currentFunc;
+  //parseUCoreFunc(pc, &currentFunc);
+  //printUCoreFunc(currentFunc);
   //added by fwl
-  ExecutionSignal onFunctionSignal;
-  onFunctionTransition.emit(&onFunctionSignal, state,
-                            sTable[currentFunc.fn_entry].name, pc);
-  onFunctionSignal.emit(state, pc);
+  //ExecutionSignal onFunctionSignal;
+  //onFunctionTransition.emit(&onFunctionSignal, state,
+  //sTable[currentFunc.fn_entry].name, pc);
+  //onFunctionSignal.emit(state, pc);
 }
 
 /**************Signal Unrelated funcs********************/
@@ -382,7 +382,7 @@ void UCoreMonitor::parseUCoreStab(S2EExecutionState *state){
     exit(-1);
   }
   //print result
-  printUCoreStabs();
+  //printUCoreStabs();
   return;
 }
 
