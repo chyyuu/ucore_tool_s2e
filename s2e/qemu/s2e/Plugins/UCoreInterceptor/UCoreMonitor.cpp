@@ -6,6 +6,7 @@
 extern "C" {
 #include "config.h"
 #include "qemu-common.h"
+#include "QEMUMonitorInterface.h"
 }
 
 #include "UCoreMonitor.h"
@@ -63,7 +64,9 @@ void UCoreMonitor::initialize(){
     s2e()->getCorePlugin()->onTranslateJumpStart
       .connect(sigc::mem_fun(*this, &UCoreMonitor::onTBJumpStart));
     if(m_MonitorThreads){
-      m_KeCurrentThread = sMap["current"];
+      m_KeCurrentThread = sMap[CURRENT_THREAD_SYMBOL];
+      m_KeNrProcess = sMap[NR_PROCESS_SYMBOL];
+      m_KePCBLinkedList = sMap[PCB_LINKED_LIST_SYMBOL];
       this->onFunctionCalling.connect(sigc::mem_fun(*this, &UCoreMonitor::slotFunctionCalling));
     }
   }
@@ -91,8 +94,8 @@ void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
   uint64_t esp = state->getSp();
   //Note: 4 for return address
   uint64_t ppPCB = esp + 4;
-  UCorePCB* prev = parseUCorePCB(state, m_KeCurrentThread);
-  UCorePCB* next = parseUCorePCB(state, ppPCB);
+  UCorePCB* prev = parseUCorePCBLevel2(state, m_KeCurrentThread);
+  UCorePCB* next = parseUCorePCBLevel2(state, ppPCB);
   //printUCorePCB(prev);
   //printUCorePCB(next);
   onThreadSwitching.emit(state, prev, next, pc);
@@ -106,7 +109,7 @@ void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
   uint64_t ppPCB = esp + 4;
   //Note: here 8 = 4(return address) + 4(proc struct pointer);
   uint64_t ppName = esp + 8;
-  UCorePCB* proc = parseUCorePCB(state, ppPCB);
+  UCorePCB* proc = parseUCorePCBLevel2(state, ppPCB);
   proc->name = parseUCorePName(state, ppName);
   //for debug
   //printUCorePCB(proc);
@@ -116,7 +119,7 @@ void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
 //Monitoring func do_exit
 void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
   s2e()->getDebugStream() << "[UCoreMonitor]Thread exiting\n";
-  UCorePCB* current = parseUCorePCB(state, m_KeCurrentThread);
+  UCorePCB* current = parseUCorePCBLevel2(state, m_KeCurrentThread);
   //printUCorePCB(current);
   onThreadExiting.emit(state, current, pc);
 }
@@ -216,7 +219,7 @@ bool UCoreMonitor::getCurrentStack(S2EExecutionState *s, uint64_t *base,
 }
 
 //Nuk's parsing area, dirty code's all here ;)
-UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
+UCorePCB* UCoreMonitor::parseUCorePCBLevel2(S2EExecutionState *state,
                                  uint64_t addr){
   uint64_t pPCB = 0;
   if(!state->readMemoryConcrete(addr, (void*)(&pPCB), 4)){
@@ -226,7 +229,7 @@ UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
   UCorePCB* pcb = new UCorePCB();
   char block[PCB_SIZE];
   if(!state->readMemoryConcrete(pPCB, block, PCB_SIZE)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get PCB error!\n";
+    s2e()->getWarningsStream(state) << "[ERROR]Level 2 get PCB error!\n";
     return NULL;
   }
   memcpy(&(pcb->state), block + PCB_STATE_OFFSET, 4);
@@ -234,6 +237,22 @@ UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
   memcpy(&(pcb->runs), block + PCB_RUNS_OFFSET, 4);
   memcpy(&(pcb->parentAddr), block + PCB_PARENT_OFFSET, 4);
   pcb->pcb_addr = pPCB;
+  return pcb;
+}
+
+UCorePCB* UCoreMonitor::parseUCorePCBLevel1(S2EExecutionState *state,
+                                 uint64_t addr){
+  UCorePCB* pcb = new UCorePCB();
+  char block[PCB_SIZE];
+  if(!state->readMemoryConcrete(addr, block, PCB_SIZE)){
+    s2e()->getWarningsStream(state) << "[ERROR]Level 1 get PCB error!\n";
+    return NULL;
+  }
+  memcpy(&(pcb->state), block + PCB_STATE_OFFSET, 4);
+  memcpy(&(pcb->pid), block + PCB_PID_OFFSET, 4);
+  memcpy(&(pcb->runs), block + PCB_RUNS_OFFSET, 4);
+  memcpy(&(pcb->parentAddr), block + PCB_PARENT_OFFSET, 4);
+  pcb->pcb_addr = addr;
   return pcb;
 }
 
@@ -250,6 +269,18 @@ std::string* UCoreMonitor::parseUCorePName(S2EExecutionState *state,
     return NULL;
   }
   if(!state->readMemoryConcrete(pBlock, block, PCB_NAME_LEN)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get block error!\n";
+    return NULL;
+  }
+  std::string* result = new std::string(block);
+  return result;
+}
+
+std::string* UCoreMonitor::parseUCorePNamePrint(S2EExecutionState *state,
+                                   uint64_t addr){
+  char block[PCB_NAME_LEN];
+  memset(block, 0, PCB_NAME_LEN);
+  if(!state->readMemoryConcrete(addr, block, PCB_NAME_LEN)){
     s2e()->getWarningsStream(state) << "[ERROR]Get block error!\n";
     return NULL;
   }
@@ -431,13 +462,13 @@ void UCoreMonitor::printUCorePCB(UCorePCB* proc){
   if(proc == NULL){
     return;
   }
-  s2e()->getDebugStream() << "proc->state: " << proc->state <<"\n";
-  s2e()->getDebugStream() << "proc->pid: " << proc->pid << "\n";
-  s2e()->getDebugStream() << "proc->runs: " << proc->runs << "\n";
-  s2e()->getDebugStream() << "proc->parent: ";
-  s2e()->getDebugStream().write_hex(proc->parentAddr) << "\n";
+  cout << "proc->state: " << proc->state <<"\n";
+  cout << "proc->pid: " << proc->pid << "\n";
+  cout << "proc->runs: " << proc->runs << "\n";
+  cout << "proc->parent: ";
+  cout << std::hex << (proc->parentAddr) << "\n";
   if(proc->name != NULL){
-    s2e()->getDebugStream() << "proc->name: " << *proc->name << "\n";
+    cout << "proc->name: " << *proc->name << "\n";
   }
 }
 
@@ -484,6 +515,53 @@ void UCoreMonitor::printUCoreFunc(UCoreFunc func){
   s2e()->getWarningsStream() << "\n";
 
 }
+
+//QEMU Monitor helper functions
+void UCoreMonitor::printAllThreads(S2EExecutionState* state){
+  int nr_process = parseNrProcess(state);
+  cout << "We have " << nr_process << " processes now.\n";
+  UCorePCB** processes = parseUCorePCBLinkedList(state, nr_process);
+  for(int i = 0; i < nr_process; i ++){
+    printUCorePCB(processes[i]);
+  }
+  for(int i = 0; i < nr_process; i ++){
+    delete processes[i]->name;
+  }
+  delete[] processes;
+  return;
+}
+
+uint32_t UCoreMonitor::parseNrProcess(S2EExecutionState* state){
+  uint32_t ret;
+  if(!state->readMemoryConcrete(m_KeNrProcess, (void*)(&ret), 4)){
+      s2e()->getWarningsStream(state) << "[ERROR]Get NrProcess error!\n";
+      return NULL;
+  }
+  return ret;
+}
+
+UCorePCB** UCoreMonitor::parseUCorePCBLinkedList(S2EExecutionState* state,
+                                   uint32_t n){
+  UCorePCB** ret = new UCorePCB*[n];
+  uint64_t offset = m_KePCBLinkedList;
+  for(int i = 0; i < n; i ++){
+    uint32_t list_pointer;
+    if(!state->readMemoryConcrete(offset, (void*)(&list_pointer), sizeof(list_pointer))){
+      s2e()->getWarningsStream(state) << "[ERROR]Get Linked List error!\n";
+      exit(-1);
+    }
+    uint32_t pcb_pointer = list_pointer - PCB_LIST_LINK_OFFSET;
+    ret[i] = parseUCorePCBLevel1(state, pcb_pointer);
+    ret[i]->name = parseUCorePNamePrint(state, pcb_pointer + PCB_NAME_OFFSET);
+    offset = offset + sizeof(list_pointer);
+  }
+  return ret;
+}
+
+void UCoreMonitor::printHelloWorld(){
+  cout << "Hello world!\n";
+}
+
 ///////////////////////////
 
 UCoreMonitorState::UCoreMonitorState(){
@@ -499,4 +577,10 @@ UCoreMonitorState* UCoreMonitorState::clone() const {
 
 PluginState *UCoreMonitorState::factory(Plugin *p, S2EExecutionState *state){
   return new UCoreMonitorState();
+}
+
+///////////////////////////
+
+void ucore_monitor_print_threads(void){
+  ((UCoreMonitor*)g_s2e->getPlugin("UCoreMonitor"))->printAllThreads(g_s2e_state);
 }

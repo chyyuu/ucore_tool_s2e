@@ -52,6 +52,19 @@ STEXI
 Quit the emulator.
 ETEXI
 
+{
+        .name   =    "print_threads",
+        .args_type  = "",
+        .params     = "",
+        .help       = "Print threads of UCore OS",
+        .mhandler.cmd = hmp_print_threads,
+},
+        STEXI
+        @item print_threads
+        @findex print_threads
+        Print threads of UCore.
+        ETEXI
+
     {
         .name       = "block_resize",
         .args_type  = "device:B,size:o",

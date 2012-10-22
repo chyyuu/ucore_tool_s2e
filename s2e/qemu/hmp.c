@@ -934,3 +934,8 @@ void hmp_migrate(Monitor *mon, const QDict *qdict)
         qemu_mod_timer(status->timer, qemu_get_clock_ms(rt_clock));
     }
 }
+/* Custom functions added by Nuk */
+extern void print_threads();
+void hmp_print_threads(Monitor *mon, const QDict *qdict){
+  print_threads();
+}

@@ -61,4 +61,7 @@ void hmp_block_job_set_speed(Monitor *mon, const QDict *qdict);
 void hmp_block_job_cancel(Monitor *mon, const QDict *qdict);
 void hmp_migrate(Monitor *mon, const QDict *qdict);
 
+/** Customized by Nuk*/
+void hmp_print_threads(Monitor *mon, const QDict *qdict);
+
 #endif

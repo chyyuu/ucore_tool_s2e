@@ -1,6 +1,7 @@
 #ifndef _UCORE_MONITOR_H
 #define _UCORE_MONITOR_H
 
+
 #include "UCoreStab.h"
 #include "UCorePCB.h"
 #include "UCoreFunc.h"
@@ -44,6 +45,7 @@ namespace s2e{
       void disconnect(S2EExecutionState *state){
         return;
       }
+      void printHelloWorld(void);
 
     private:
       //mointor switch
@@ -74,6 +76,8 @@ namespace s2e{
       //Kernel Addresses
       uint64_t m_KernelBase;
       uint64_t m_KeCurrentThread;
+      uint64_t m_KeNrProcess;
+      uint64_t m_KePCBLinkedList;
       //STAB Section Address
       uint64_t m_StabStart;
       uint64_t m_StabEnd;
@@ -108,9 +112,13 @@ namespace s2e{
       void stab_binsearch(UCoreStab* stabs, int* region_left,
                           int* region_right, int type, uint64_t addr);
       //parse thread related struct
-      UCorePCB* parseUCorePCB(S2EExecutionState *state,
+      UCorePCB* parseUCorePCBLevel2(S2EExecutionState *state,
+                              uint64_t addr);
+      UCorePCB* parseUCorePCBLevel1(S2EExecutionState *state,
                               uint64_t addr);
       std::string* parseUCorePName(S2EExecutionState *state,
+                                  uint64_t addr);
+      std::string* parseUCorePNamePrint(S2EExecutionState *state,
                                   uint64_t addr);
       //print functions
       void printUCorePCB(UCorePCB* ucorePCB);
@@ -132,6 +140,11 @@ namespace s2e{
       bool isKernelAddress(uint64_t pc) const;
       uint64_t getPid(S2EExecutionState *s, uint64_t pc);
       bool getCurrentStack(S2EExecutionState *s, uint64_t *base, uint64_t *size);
+    public:
+      void printAllThreads(S2EExecutionState* state);
+      uint32_t parseNrProcess(S2EExecutionState* state);
+      UCorePCB** parseUCorePCBLinkedList(S2EExecutionState* state,
+                                         uint32_t n);
     };// class UCoreMonitor
 
     class UCoreMonitorState: public PluginState{
