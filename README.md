@@ -64,7 +64,6 @@ to
 
 Run the following commands under ucore_tool_s2e directory,
 
-    $ cd build/qemu-release/i386-s2e-softmmu/s2e/Plugins
     $ mkdir UCoreInterceptor
 
 then run "make" command under ucore_tool_s2e/build directory.
@@ -86,7 +85,6 @@ then run "make" command under ucore_tool_s2e/build directory.
 
     monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
         $(V)$(QEMU) -monitor stdio $(QEMUOPTS) -serial null
-<<<<<<< HEAD
 
  * Copy these lines like the follow ones and use your_own_path in "S2E" and "-s2e-config-file".
 
@@ -115,6 +113,27 @@ then run "make" command under ucore_tool_s2e/build directory.
 
     S2EOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback \
                 -s2e-config-file /home/fwl/ucore/ucore_tool_s2e/config/ucoreconfig.lua -s2e-verbose
+
+    s2e: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+        $(V)$(S2E) -parallel stdio $(S2EOPTS) -serial null
+    QEMUOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback
+
+    .PHONY: qemu qemu-nox debug debug-nox monitor
+    qemu: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+        $(V)$(QEMU) -parallel stdio $(QEMUOPTS) -serial null
+
+    qemu-nox: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
+        $(V)$(QEMU) -serial mon:stdio $(QEMUOPTS) -nographic
+
+    monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
+        $(V)$(QEMU) -monitor stdio $(QEMUOPTS) -serial null
+
+ * Copy these lines like the follow ones and use your_own_path in "S2E" and "-s2e-config-file".
+
+    S2E :=	/home/fwl/ucore/ucore_tool_s2e/build/qemu-release/i386-s2e-softmmu/qemu-system-i386
+
+    S2EOPTS = -hda $(UCOREIMG) -drive file=$(SWAPIMG),media=disk,cache=writeback -drive file=$(SFSIMG),media=disk,cache=writeback \
+        -s2e-config-file /home/fwl/ucore/ucore_tool_s2e/config/ucoreconfig.lua -s2e-verbose
 
     s2e: $(UCOREIMG) $(SWAPIMG) $(SFSIMG)
         $(V)$(S2E) -parallel stdio $(S2EOPTS) -serial null
