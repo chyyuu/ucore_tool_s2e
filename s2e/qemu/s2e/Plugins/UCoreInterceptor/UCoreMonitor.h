@@ -84,6 +84,8 @@ namespace s2e{
       uint64_t m_StabStrStart;
       uint64_t m_StabStrEnd;
       bool first;
+      bool ret_first;
+      bool stabParsed;
 
       //Signal connectors
       void onPageDirectoryChange(S2EExecutionState *state,
@@ -108,7 +110,7 @@ namespace s2e{
       void parseKernelLd();
       // parse function related struct
       void parseUCoreStab(S2EExecutionState *state);
-      bool parseUCoreFunc(uint64_t addr, UCoreFunc* func);
+      int parseUCoreFunc(uint64_t addr, UCoreFunc* func);
       void stab_binsearch(UCoreStab* stabs, int* region_left,
                           int* region_right, int type, uint64_t addr);
       //parse thread related struct

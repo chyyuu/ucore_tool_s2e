@@ -8,7 +8,8 @@ namespace s2e{
   typedef struct _UCoreFunc{
     std::string src_name;
     uint64_t fn_entry;
-    uint64_t line_num;
+    std::string fn_name;
+    uint16_t line_num;
   } UCoreFunc;
 }
 

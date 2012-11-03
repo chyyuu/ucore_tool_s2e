@@ -56,7 +56,12 @@ void UCoreMonitor::initialize(){
   m_StabStrStart = sMap[STABSTR_BEGIN_ADDR_SYMBOL];
   m_StabStrEnd = sMap[STABSTR_END_ADDR_SYMBOL];
   first = true;
-
+  ret_first = true;
+  stabParsed = false;
+  stab_array = NULL;
+  stab_array_end = NULL;
+  stabstr_array = NULL;
+  stabstr_array_end = NULL;
   //connect Signals
   if(m_MonitorFunction){
     s2e()->getCorePlugin()->onTranslateBlockEnd
@@ -130,10 +135,7 @@ void UCoreMonitor::onTranslateBlockEnd(ExecutionSignal *signal,
                                        TranslationBlock *tb,
                                        uint64_t pc, bool static_target
                                        , uint64_t target_pc){
-  uint64_t vpc = pc;
-  if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-    vpc += 0xc0000000;
-  if(vpc >= getKernelStart()){
+  if(pc >= getKernelStart()){
     if(tb->s2e_tb_type == TB_CALL || tb->s2e_tb_type == TB_CALL_IND){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotCall));
     }
@@ -145,10 +147,9 @@ void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
   if(pc > getKernelStart() && first){
     parseUCoreStab(state);
     first = false;
+    stabParsed = true;
   }
   uint64_t vpc = state->getPc();
-  if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-  vpc += 0xc0000000;
 
   //added by fwl
   ExecutionSignal onFunctionSignal;
@@ -165,11 +166,13 @@ void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
 void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
                                   S2EExecutionState *state,
                                   TranslationBlock *tb,
-                                  uint64_t, int jump_type){
+                                  uint64_t pc, int jump_type){
+  /*Added by fwl*/
   uint64_t vpc = state->getPc();
-  if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-    vpc += 0xc0000000;
-  if(vpc >= getKernelStart()){
+  /*if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
+    vpc += 0xc0000000;*/
+
+  if(vpc >= getKernelStart() && ((vpc & 0xf0000000) == 0xc0000000)){
     if(jump_type == JT_RET || jump_type == JT_LRET){
       signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotRet));
     }
@@ -178,10 +181,24 @@ void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
 
 //slot ret inst
 void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
-
-  //UCoreFunc currentFunc;
-  //parseUCoreFunc(pc, &currentFunc);
-  //printUCoreFunc(currentFunc);
+  if(!stabParsed){
+    return;
+  }
+  if(ret_first){
+    uint64_t vpc = state->getPc();
+    s2e()->getWarningsStream() << "\n[UCoreMonitor]SlotRetPC:";
+    s2e()->getWarningsStream().write_hex(pc);
+    s2e()->getWarningsStream() << "\n[UCoreMonitor]SlotRetVPC:";
+    s2e()->getWarningsStream().write_hex(vpc) << "\n";
+    UCoreFunc currentFunc;
+    if(parseUCoreFunc(vpc, &currentFunc) == 0){ //0 means success
+      printUCoreFunc(currentFunc);
+    }else{
+      s2e()->getWarningsStream() << "[UCoreMonitor]VPC: ";
+      s2e()->getWarningsStream().write_hex(vpc) << ". Returning from func unknown\n";
+    }
+    ret_first = false;
+  }
   //added by fwl
   //ExecutionSignal onFunctionSignal;
   //onFunctionTransition.emit(&onFunctionSignal, state,
@@ -288,7 +305,7 @@ std::string* UCoreMonitor::parseUCorePNamePrint(S2EExecutionState *state,
   return result;
 }
 
-bool UCoreMonitor::parseUCoreFunc(uint64_t addr,
+int UCoreMonitor::parseUCoreFunc(uint64_t addr,
                                   UCoreFunc* func){
   func->src_name = "<unknown>";
   func->fn_entry = addr;
@@ -300,6 +317,7 @@ bool UCoreMonitor::parseUCoreFunc(uint64_t addr,
   char* stabstr, *stabstr_end;
   stabstr = stabstr_array;
   stabstr_end = stabstr_array_end;
+
   // String table validity checks
   if (stabstr_end <= stabstr || stabstr_end[-1] != 0) {
     return -1;
@@ -314,7 +332,12 @@ bool UCoreMonitor::parseUCoreFunc(uint64_t addr,
   int lfun = lfile, rfun = rfile;
   int lline, rline;
   stab_binsearch(stabs, &lfun, &rfun, N_FUN, addr);
+  char* fn_name;
+  size_t fn_namelen;
   if(lfun <= rfun){
+    if(stabs[lfun].n_strx < stabstr_end - stabstr){
+      fn_name = stabstr + stabs[lfun].n_strx;
+    }
     func->fn_entry = stabs[lfun].n_value;
     addr -= func->fn_entry;
     lline = lfun;
@@ -324,6 +347,15 @@ bool UCoreMonitor::parseUCoreFunc(uint64_t addr,
     lline = lfile;
     rline = rfile;
   }
+  char* temp = fn_name;
+  while(*temp != '\0'){
+    if(*temp == ':'){
+      break;
+    }
+    temp ++;
+  }
+  fn_namelen = temp - fn_name;
+  func->fn_name = *(new string(fn_name, fn_namelen));
   stab_binsearch(stabs, &lline, &rline, N_SLINE, addr);
   if (lline <= rline) {
     func->line_num = stabs[rline].n_desc;
@@ -340,8 +372,8 @@ bool UCoreMonitor::parseUCoreFunc(uint64_t addr,
   if (lline >= lfile && stabs[lline].n_strx < stabstr_end - stabstr) {
     func->src_name = stabstr + stabs[lline].n_strx;
   }
-
-  return true;
+  //success
+  return 0;
 }
 
 void UCoreMonitor::stab_binsearch(UCoreStab* stabs, int* region_left,
@@ -391,7 +423,7 @@ void UCoreMonitor::stab_binsearch(UCoreStab* stabs, int* region_left,
 
 void UCoreMonitor::parseUCoreStab(S2EExecutionState *state){
   //parse stab
-  int n = (m_StabEnd - m_StabStart) / sizeof(UCoreStab) - 1;
+  int n = (m_StabEnd - m_StabStart) / sizeof(UCoreStab);
   stab_array = new UCoreStab[n];
   for(int i = 0; i < n;i ++){
     int addr = m_StabStart + i * sizeof(UCoreStab);
@@ -404,7 +436,7 @@ void UCoreMonitor::parseUCoreStab(S2EExecutionState *state){
   }
   stab_array_end = stab_array + n;
   //parse stabstr
-  n = (m_StabStrEnd - m_StabStrStart) / sizeof(char) - 1;
+  n = (m_StabStrEnd - m_StabStrStart) / sizeof(char);
   stabstr_array = new char[n];
   if(!state->readMemoryConcrete(m_StabStrStart,
                                 (void*)(stabstr_array),
@@ -412,6 +444,7 @@ void UCoreMonitor::parseUCoreStab(S2EExecutionState *state){
     s2e()->getWarningsStream() << "[ERROR]Parsing UCoreStab\n";
     exit(-1);
   }
+  stabstr_array_end = stabstr_array + n;
   //print result
   //printUCoreStabs();
   return;
@@ -504,16 +537,13 @@ void UCoreMonitor::printUCoreStabs(){
 
 //Print Funcs
 void UCoreMonitor::printUCoreFunc(UCoreFunc func){
-  s2e()->getWarningsStream() << "Source Name:";
+  s2e()->getWarningsStream() << "\nSource Name:";
   s2e()->getWarningsStream() << func.src_name;
-  s2e()->getWarningsStream() << "\n";
-  s2e()->getWarningsStream() << "Func Entry:";
+  s2e()->getWarningsStream() << "\nFunc Entry:";
   s2e()->getWarningsStream().write_hex(func.fn_entry);
+  s2e()->getWarningsStream() << "\nFunc Name:";
+  s2e()->getWarningsStream() << func.fn_name;
   s2e()->getWarningsStream() << "\n";
-  s2e()->getWarningsStream() << "Line num:";
-  s2e()->getWarningsStream() << func.line_num;
-  s2e()->getWarningsStream() << "\n";
-
 }
 
 //QEMU Monitor helper functions
