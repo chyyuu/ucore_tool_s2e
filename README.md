@@ -86,7 +86,6 @@ then run "make" command under ucore_tool_s2e/build directory.
 
     monitor: $(UCOREIMG) $(SWAPING) $(SFSIMG)
         $(V)$(QEMU) -monitor stdio $(QEMUOPTS) -serial null
-<<<<<<< HEAD
 
  * Copy these lines like the follow ones and use your_own_path in "S2E" and "-s2e-config-file".
 
