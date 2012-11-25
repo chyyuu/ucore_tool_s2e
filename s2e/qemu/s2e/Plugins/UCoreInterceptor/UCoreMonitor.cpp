@@ -56,18 +56,19 @@ void UCoreMonitor::initialize(){
   m_StabStrStart = sMap[STABSTR_BEGIN_ADDR_SYMBOL];
   m_StabStrEnd = sMap[STABSTR_END_ADDR_SYMBOL];
   first = true;
-  ret_first = true;
   stabParsed = false;
   stab_array = NULL;
   stab_array_end = NULL;
   stabstr_array = NULL;
   stabstr_array_end = NULL;
+
   //connect Signals
   if(m_MonitorFunction){
     s2e()->getCorePlugin()->onTranslateBlockEnd
       .connect(sigc::mem_fun(*this, &UCoreMonitor::onTranslateBlockEnd));
     s2e()->getCorePlugin()->onTranslateJumpStart
       .connect(sigc::mem_fun(*this, &UCoreMonitor::onTBJumpStart));
+
     if(m_MonitorThreads){
       m_KeCurrentThread = sMap[CURRENT_THREAD_SYMBOL];
       m_KeNrProcess = sMap[NR_PROCESS_SYMBOL];
@@ -75,7 +76,6 @@ void UCoreMonitor::initialize(){
       this->onFunctionCalling.connect(sigc::mem_fun(*this, &UCoreMonitor::slotFunctionCalling));
     }
   }
-
 }
 
 void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
@@ -99,8 +99,19 @@ void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
   uint64_t esp = state->getSp();
   //Note: 4 for return address
   uint64_t ppPCB = esp + 4;
-  UCorePCB* prev = parseUCorePCBLevel2(state, m_KeCurrentThread);
-  UCorePCB* next = parseUCorePCBLevel2(state, ppPCB);
+  //get current as prev
+  uint64 pPCB = 0;
+  if(!state->readMemoryConcrete(m_KeCurrentThread, (void*)(&pPCB), 4)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
+    return;
+  }
+  UCorePCB* prev = parseUCorePCB(state, pPCB);
+  //get next...
+  if(!state->readMemoryConcrete(ppPCB, (void*)(&pPCB), 4)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
+    return;
+  }
+  UCorePCB* next = parseUCorePCB(state, pPCB);
   //printUCorePCB(prev);
   //printUCorePCB(next);
   onThreadSwitching.emit(state, prev, next, pc);
@@ -114,7 +125,12 @@ void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
   uint64_t ppPCB = esp + 4;
   //Note: here 8 = 4(return address) + 4(proc struct pointer);
   uint64_t ppName = esp + 8;
-  UCorePCB* proc = parseUCorePCBLevel2(state, ppPCB);
+  uint64_t pPCB = 0;
+  if(!state->readMemoryConcrete(ppPCB, (void*)(&pPCB), 4)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
+    return;
+  }
+  UCorePCB* proc = parseUCorePCB(state, pPCB);
   proc->name = parseUCorePName(state, ppName);
   //for debug
   //printUCorePCB(proc);
@@ -124,7 +140,12 @@ void UCoreMonitor::slotKmThreadInit(S2EExecutionState *state, uint64_t pc) {
 //Monitoring func do_exit
 void UCoreMonitor::slotKmThreadExit(S2EExecutionState *state, uint64_t pc) {
   s2e()->getDebugStream() << "[UCoreMonitor]Thread exiting\n";
-  UCorePCB* current = parseUCorePCBLevel2(state, m_KeCurrentThread);
+  uint64_t pPCB = 0;
+  if(!state->readMemoryConcrete(m_KeCurrentThread, (void*)(&pPCB), 4)){
+    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
+    return;
+  }
+  UCorePCB* current = parseUCorePCB(state, pPCB);
   //printUCorePCB(current);
   onThreadExiting.emit(state, current, pc);
 }
@@ -155,11 +176,12 @@ void UCoreMonitor::slotCall(S2EExecutionState *state, uint64_t pc){
   ExecutionSignal onFunctionSignal;
   onFunctionTransition.emit(&onFunctionSignal, state, sTable[vpc].name, pc);
   onFunctionSignal.emit(state, pc);
+
   //added by Nuk
-  ExecutionSignal onFunctionCallingSignal;
-  onFunctionCalling.emit(&onFunctionCallingSignal, state,
+  ExecutionSignal callingSignal;
+  onFunctionCalling.emit(&callingSignal, state,
                          sTable[vpc].name, pc);
-  onFunctionCallingSignal.emit(state, pc);
+  callingSignal.emit(state, pc);
 }
 
 //catch ret inst
@@ -184,21 +206,17 @@ void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
   if(!stabParsed){
     return;
   }
-  if(ret_first){
-    uint64_t vpc = state->getPc();
-    s2e()->getWarningsStream() << "\n[UCoreMonitor]SlotRetPC:";
-    s2e()->getWarningsStream().write_hex(pc);
-    s2e()->getWarningsStream() << "\n[UCoreMonitor]SlotRetVPC:";
-    s2e()->getWarningsStream().write_hex(vpc) << "\n";
-    UCoreFunc currentFunc;
-    if(parseUCoreFunc(vpc, &currentFunc) == 0){ //0 means success
-      printUCoreFunc(currentFunc);
-    }else{
-      s2e()->getWarningsStream() << "[UCoreMonitor]VPC: ";
-      s2e()->getWarningsStream().write_hex(vpc) << ". Returning from func unknown\n";
-    }
-    ret_first = false;
+  uint64_t vpc = state->getPc();
+  UCoreFunc currentFunc;
+  if(parseUCoreFunc(vpc, &currentFunc) == 0){ //0 means success
+    printUCoreFunc(currentFunc);
   }
+
+  //added by Nuk
+  ExecutionSignal returningSignal;
+  onFunctionReturning.emit(&returningSignal, state,
+                           currentFunc.fn_name, pc);
+  returningSignal.emit(state, pc);
   //added by fwl
   //ExecutionSignal onFunctionSignal;
   //onFunctionTransition.emit(&onFunctionSignal, state,
@@ -236,33 +254,12 @@ bool UCoreMonitor::getCurrentStack(S2EExecutionState *s, uint64_t *base,
 }
 
 //Nuk's parsing area, dirty code's all here ;)
-UCorePCB* UCoreMonitor::parseUCorePCBLevel2(S2EExecutionState *state,
-                                 uint64_t addr){
-  uint64_t pPCB = 0;
-  if(!state->readMemoryConcrete(addr, (void*)(&pPCB), 4)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
-    return NULL;
-  }
-  UCorePCB* pcb = new UCorePCB();
-  char block[PCB_SIZE];
-  if(!state->readMemoryConcrete(pPCB, block, PCB_SIZE)){
-    s2e()->getWarningsStream(state) << "[ERROR]Level 2 get PCB error!\n";
-    return NULL;
-  }
-  memcpy(&(pcb->state), block + PCB_STATE_OFFSET, 4);
-  memcpy(&(pcb->pid), block + PCB_PID_OFFSET, 4);
-  memcpy(&(pcb->runs), block + PCB_RUNS_OFFSET, 4);
-  memcpy(&(pcb->parentAddr), block + PCB_PARENT_OFFSET, 4);
-  pcb->pcb_addr = pPCB;
-  return pcb;
-}
-
-UCorePCB* UCoreMonitor::parseUCorePCBLevel1(S2EExecutionState *state,
+UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
                                  uint64_t addr){
   UCorePCB* pcb = new UCorePCB();
   char block[PCB_SIZE];
   if(!state->readMemoryConcrete(addr, block, PCB_SIZE)){
-    s2e()->getWarningsStream(state) << "[ERROR]Level 1 get PCB error!\n";
+    s2e()->getWarningsStream(state) << "[ERROR]Parse PCB error!\n";
     return NULL;
   }
   memcpy(&(pcb->state), block + PCB_STATE_OFFSET, 4);
@@ -581,7 +578,7 @@ UCorePCB** UCoreMonitor::parseUCorePCBLinkedList(S2EExecutionState* state,
       exit(-1);
     }
     uint32_t pcb_pointer = list_pointer - PCB_LIST_LINK_OFFSET;
-    ret[i] = parseUCorePCBLevel1(state, pcb_pointer);
+    ret[i] = parseUCorePCB(state, pcb_pointer);
     ret[i]->name = parseUCorePNamePrint(state, pcb_pointer + PCB_NAME_OFFSET);
     offset = offset + sizeof(list_pointer);
   }

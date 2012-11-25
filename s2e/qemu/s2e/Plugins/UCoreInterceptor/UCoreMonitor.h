@@ -38,7 +38,7 @@ namespace s2e{
       ThreadSwitchSignal onThreadSwitching;
       ThreadSignal onThreadCreating;
       ThreadSignal onThreadExiting;
-      /*----------------------------------*/
+      /*-------------------*/
 
       void slotCall(S2EExecutionState* state, uint64_t pc);
       void slotRet(S2EExecutionState* state, uint64_t pc);
@@ -78,14 +78,14 @@ namespace s2e{
       uint64_t m_KeCurrentThread;
       uint64_t m_KeNrProcess;
       uint64_t m_KePCBLinkedList;
-      //STAB Section Address
+      //STAB Related Address
       uint64_t m_StabStart;
       uint64_t m_StabEnd;
       uint64_t m_StabStrStart;
       uint64_t m_StabStrEnd;
-      bool first;
-      bool ret_first;
       bool stabParsed;
+
+      bool first;
 
       //Signal connectors
       void onPageDirectoryChange(S2EExecutionState *state,
@@ -108,25 +108,21 @@ namespace s2e{
       // parse files
       void parseSystemMapFile();
       void parseKernelLd();
-      // parse function related struct
+      // parsers
       void parseUCoreStab(S2EExecutionState *state);
       int parseUCoreFunc(uint64_t addr, UCoreFunc* func);
       void stab_binsearch(UCoreStab* stabs, int* region_left,
                           int* region_right, int type, uint64_t addr);
-      //parse thread related struct
-      UCorePCB* parseUCorePCBLevel2(S2EExecutionState *state,
-                              uint64_t addr);
-      UCorePCB* parseUCorePCBLevel1(S2EExecutionState *state,
+      UCorePCB* parseUCorePCB(S2EExecutionState *state,
                               uint64_t addr);
       std::string* parseUCorePName(S2EExecutionState *state,
                                   uint64_t addr);
       std::string* parseUCorePNamePrint(S2EExecutionState *state,
                                   uint64_t addr);
-      //print functions
+      //prints
       void printUCorePCB(UCorePCB* ucorePCB);
       void printUCoreStabs();
       void printUCoreFunc(UCoreFunc func);
-      //Meta functions ends here
 
       void notifyLoadForAllThreads(S2EExecutionState* state);
       uint64_t getKernelStart() const;
