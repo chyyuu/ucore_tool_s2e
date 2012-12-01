@@ -99,22 +99,20 @@ void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
     signal->connect(sigc::mem_fun(*this,
                                   &UCoreMonitor::slotKmThreadExit));
   }else if(m_MonitorPanic){
-    if(fname == ""){
+    if(fname == "__panic"){
       signal->connect(sigc::mem_fun(*this,
                                     &UCoreMonitor::PanicMonitor));
     }
   }
 }//slotFunctionCalling
 
-void PanicMonitor(ExecutionSignal *signal,
-                  S2EExecutionState *state,
-                  std::string fname,
-                  ,uint64_t pc){
-  if(fname == "")
+void UCoreMonitor::PanicMonitor(S2EExecutionState *state,
+                  uint64_t pc){
 }//PanicMonitor
 
 //Monitoring function proc_run
-void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){
+void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state,
+                                      uint64_t pc){
   s2e()->getDebugStream() << "[UCoreMonitor]Thread switching\n";
   uint64_t esp = state->getSp();
   //Note: 4 for return address

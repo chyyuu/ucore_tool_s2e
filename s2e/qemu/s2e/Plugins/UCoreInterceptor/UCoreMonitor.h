@@ -107,10 +107,8 @@ namespace s2e{
       void slotKmThreadInit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadExit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc);
-      void PanicMonitor(ExecutionSignal *signal,
-                        S2EExecutionState *state,
-                        std::string fname,
-                        ,uint64_t pc);
+      void PanicMonitor(S2EExecutionState *state,
+                        uint64_t pc);
 
       // Meta functions starts here
       // parse files
