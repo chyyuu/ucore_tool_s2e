@@ -18,19 +18,25 @@ extern "C" {
 #include <s2e/ConfigFile.h>
 #include <s2e/Utils.h>
 
-
 using namespace std;
 using namespace s2e;
 using namespace s2e::plugins;
 
-S2E_DEFINE_PLUGIN(UCoreMonitor, "Monitor of UCore OS", "UCoreMonitor", );
+S2E_DEFINE_PLUGIN(UCoreMonitor,
+                  "Monitor of UCore OS",
+                  "UCoreMonitor", );
+
 UCoreMonitor::~UCoreMonitor(){
 }
 
 void UCoreMonitor::initialize(){
 
-  m_MonitorFunction = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorFunction");
-  m_MonitorThreads = s2e()->getConfig()->getBool(getConfigKey() + ".MonitorThreads");
+  m_MonitorFunction = s2e()->getConfig()->getBool(getConfigKey() +
+                                                  ".MonitorFunction");
+  m_MonitorThreads = s2e()->getConfig()->getBool(getConfigKey() +
+                                                 ".MonitorThreads");
+  m_MonitorPanic = s2e()->getConfig()->getBool(getConfigKey() +
+                                               ".MonitorPanic");
 
   //parse kernel.sym file
   bool ok;
@@ -55,12 +61,14 @@ void UCoreMonitor::initialize(){
   m_StabEnd = sMap[STAB_END_ADDR_SYMBOL];
   m_StabStrStart = sMap[STABSTR_BEGIN_ADDR_SYMBOL];
   m_StabStrEnd = sMap[STABSTR_END_ADDR_SYMBOL];
-  first = true;
   stabParsed = false;
   stab_array = NULL;
   stab_array_end = NULL;
   stabstr_array = NULL;
   stabstr_array_end = NULL;
+
+  //Define the first running varible as true.
+  first = true;
 
   //connect Signals
   if(m_MonitorFunction){
@@ -68,15 +76,14 @@ void UCoreMonitor::initialize(){
       .connect(sigc::mem_fun(*this, &UCoreMonitor::onTranslateBlockEnd));
     s2e()->getCorePlugin()->onTranslateJumpStart
       .connect(sigc::mem_fun(*this, &UCoreMonitor::onTBJumpStart));
-
     if(m_MonitorThreads){
       m_KeCurrentThread = sMap[CURRENT_THREAD_SYMBOL];
       m_KeNrProcess = sMap[NR_PROCESS_SYMBOL];
       m_KePCBLinkedList = sMap[PCB_LINKED_LIST_SYMBOL];
       this->onFunctionCalling.connect(sigc::mem_fun(*this, &UCoreMonitor::slotFunctionCalling));
     }
-  }
-}
+  }//
+}//Initialize
 
 void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
                                           S2EExecutionState *state,
@@ -86,12 +93,25 @@ void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
     signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotKmThreadSwitch));
   }else if(fname == "set_proc_name"){
     //Thread create
-    signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotKmThreadInit));
+    signal->connect(sigc::mem_fun( *this, &UCoreMonitor::slotKmThreadInit));
   }else if(fname == "do_exit"){
     //Thread exit
-    signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotKmThreadExit));
+    signal->connect(sigc::mem_fun(*this,
+                                  &UCoreMonitor::slotKmThreadExit));
+  }else if(m_MonitorPanic){
+    if(fname == ""){
+      signal->connect(sigc::mem_fun(*this,
+                                    &UCoreMonitor::PanicMonitor));
+    }
   }
-}
+}//slotFunctionCalling
+
+void PanicMonitor(ExecutionSignal *signal,
+                  S2EExecutionState *state,
+                  std::string fname,
+                  ,uint64_t pc){
+  if(fname == "")
+}//PanicMonitor
 
 //Monitoring function proc_run
 void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc){

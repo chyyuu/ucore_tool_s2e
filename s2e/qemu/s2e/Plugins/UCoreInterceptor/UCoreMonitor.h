@@ -51,6 +51,7 @@ namespace s2e{
       //mointor switch
       bool m_MonitorThreads;
       bool m_MonitorFunction;
+      bool m_MonitorPanic;
 
       //Symbol table
       typedef struct __symbol_struct{
@@ -85,6 +86,8 @@ namespace s2e{
       uint64_t m_StabStrEnd;
       bool stabParsed;
 
+      //Indicating the first instructions
+      //To get the chance of parsing STAB file
       bool first;
 
       //Signal connectors
@@ -98,11 +101,16 @@ namespace s2e{
                           TranslationBlock *tb, uint64_t, int jump_type);
 
       // signal slot functions
-      void slotFunctionCalling(ExecutionSignal *signal, S2EExecutionState *state
-                               ,std::string fname, uint64_t pc);
+      void slotFunctionCalling(ExecutionSignal *signal,
+                               S2EExecutionState *state,
+                               std::string fname, uint64_t pc);
       void slotKmThreadInit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadExit(S2EExecutionState *state, uint64_t pc);
       void slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc);
+      void PanicMonitor(ExecutionSignal *signal,
+                        S2EExecutionState *state,
+                        std::string fname,
+                        ,uint64_t pc);
 
       // Meta functions starts here
       // parse files
