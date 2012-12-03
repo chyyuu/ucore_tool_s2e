@@ -48,7 +48,7 @@ namespace s2e{
       void printHelloWorld(void);
 
     private:
-      //mointor switch
+      //mointor controllers
       bool m_MonitorThreads;
       bool m_MonitorFunction;
       bool m_MonitorPanic;
@@ -114,6 +114,7 @@ namespace s2e{
       // parse files
       void parseSystemMapFile();
       void parseKernelLd();
+
       // parsers
       void parseUCoreStab(S2EExecutionState *state);
       int parseUCoreFunc(uint64_t addr, UCoreFunc* func);
@@ -135,15 +136,20 @@ namespace s2e{
       uint64_t getKeInitThread() const;
       uint64_t getKeTerminateThread() const;
       uint64_t getKeSwitchThread() const;
-      // bool getThreadDescriptor(S2EExecutionState* state,
-      //                          uint64_t pThread,
-      //                          UCoreThreadDescriptor threadDescriptor);
+
       uint64_t getCurrentThread(S2EExecutionState *state);
-      bool getImports(S2EExecutionState *s, const ModuleDescriptor &desc, Imports &I);
-      bool getExports(S2EExecutionState *s, const ModuleDescriptor &desc, Exports &E);
+      bool getImports(S2EExecutionState *s,
+                      const ModuleDescriptor &desc,
+                      Imports &I);
+      bool getExports(S2EExecutionState *s,
+                      const ModuleDescriptor &desc,
+                      Exports &E);
+      uint64_t getPid(S2EExecutionState *s,
+                      uint64_t pc);
+      bool getCurrentStack(S2EExecutionState *s,
+                           uint64_t *base,
+                           uint64_t *size);
       bool isKernelAddress(uint64_t pc) const;
-      uint64_t getPid(S2EExecutionState *s, uint64_t pc);
-      bool getCurrentStack(S2EExecutionState *s, uint64_t *base, uint64_t *size);
     public:
       void printAllThreads(S2EExecutionState* state);
       uint32_t parseNrProcess(S2EExecutionState* state);
