@@ -111,11 +111,22 @@ namespace s2e{
                         uint64_t pc);
 
       // Meta functions starts here
-      // parse files
+
+      // parse origin files
       void parseSystemMapFile();
       void parseKernelLd();
 
-      // parsers
+      //print functions
+      void printUCorePCB(UCorePCB* ucorePCB);
+      void printUCoreFunc(UCoreFunc func);
+      void printPanicInfo(uint64_t pc);
+      void notifyLoadForAllThreads(S2EExecutionState* state);
+      uint64_t getKernelStart() const;
+      uint64_t getKeInitThread() const;
+      uint64_t getKeTerminateThread() const;
+      uint64_t getKeSwitchThread() const;
+
+      // parse functions
       void parseUCoreStab(S2EExecutionState *state);
       int parseUCoreFunc(uint64_t addr, UCoreFunc* func);
       void stab_binsearch(UCoreStab* stabs, int* region_left,
@@ -126,16 +137,6 @@ namespace s2e{
                                   uint64_t addr);
       std::string* parseUCorePNamePrint(S2EExecutionState *state,
                                   uint64_t addr);
-      //prints
-      void printUCorePCB(UCorePCB* ucorePCB);
-      void printUCoreStabs();
-      void printUCoreFunc(UCoreFunc func);
-
-      void notifyLoadForAllThreads(S2EExecutionState* state);
-      uint64_t getKernelStart() const;
-      uint64_t getKeInitThread() const;
-      uint64_t getKeTerminateThread() const;
-      uint64_t getKeSwitchThread() const;
 
       uint64_t getCurrentThread(S2EExecutionState *state);
       bool getImports(S2EExecutionState *s,

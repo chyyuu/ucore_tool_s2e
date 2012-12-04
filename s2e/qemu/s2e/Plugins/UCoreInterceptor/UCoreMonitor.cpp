@@ -82,8 +82,8 @@ void UCoreMonitor::initialize(){
       m_KePCBLinkedList = sMap[PCB_LINKED_LIST_SYMBOL];
       this->onFunctionCalling.connect(sigc::mem_fun(*this, &UCoreMonitor::slotFunctionCalling));
     }
-  }//
-}//Initialize
+  }
+} //Initialize
 
 void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
                                           S2EExecutionState *state,
@@ -107,7 +107,9 @@ void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
 }//slotFunctionCalling
 
 void UCoreMonitor::PanicMonitor(S2EExecutionState *state,
-                  uint64_t pc){
+                                uint64_t pc){
+  s2e()->getWarningsStream() << "\n[UCoreMonitor]Kernel Panic!!\n";
+  printPanicInfo(pc);
 }//PanicMonitor
 
 //Monitoring function proc_run
@@ -224,17 +226,19 @@ void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
   if(!stabParsed){
     return;
   }
-  uint64_t vpc = state->getPc();
-  UCoreFunc currentFunc;
-  if(parseUCoreFunc(vpc, &currentFunc) == 0){ //0 means success
-    printUCoreFunc(currentFunc);
-  }
+  // uint64_t vpc = state->getPc();
+  // UCoreFunc currentFunc;
+  // if(parseUCoreFunc(vpc, &currentFunc) == 0){ //0 means success
+  //   //printUCoreFunc(currentFunc);
+  // }else{
+  //   s2e()->getWarningsStream() << "Func @ " << vpc << "can't parse!";
+  // }
 
-  //added by Nuk
-  ExecutionSignal returningSignal;
-  onFunctionReturning.emit(&returningSignal, state,
-                           currentFunc.fn_name, pc);
-  returningSignal.emit(state, pc);
+  // //added by Nuk
+  // ExecutionSignal returningSignal;
+  // onFunctionReturning.emit(&returningSignal, state,
+  //                          currentFunc.fn_name, pc);
+  // returningSignal.emit(state, pc);
   //added by fwl
   //ExecutionSignal onFunctionSignal;
   //onFunctionTransition.emit(&onFunctionSignal, state,
@@ -271,7 +275,62 @@ bool UCoreMonitor::getCurrentStack(S2EExecutionState *s, uint64_t *base,
   return false;
 }
 
-//Nuk's parsing area, dirty code's all here ;)
+//-------------------------------------
+//         Print   Functions
+//-------------------------------------
+
+void UCoreMonitor::printPanicInfo(uint64_t pc){
+  UCoreFunc* func = new UCoreFunc();
+  parseUCoreFunc(pc, func);
+  s2e()->getWarningsStream() << func->fn_name << "\n" ;
+}
+
+void UCoreMonitor::printUCorePCB(UCorePCB* proc){
+  if(proc == NULL){
+    return;
+  }
+  cout << "proc->state: " << proc->state <<"\n";
+  cout << "proc->pid: " << proc->pid << "\n";
+  cout << "proc->runs: " << proc->runs << "\n";
+  cout << "proc->parent: ";
+  cout << std::hex << (proc->parentAddr) << "\n";
+  if(proc->name != NULL){
+    cout << "proc->name: " << *proc->name << "\n";
+  }
+}
+
+void UCoreMonitor::printUCoreFunc(UCoreFunc func){
+  s2e()->getWarningsStream() << "\nSource Name:";
+  s2e()->getWarningsStream() << func.src_name;
+  s2e()->getWarningsStream() << "\nFunc Entry:";
+  s2e()->getWarningsStream().write_hex(func.fn_entry);
+  s2e()->getWarningsStream() << "\nFunc Name:";
+  s2e()->getWarningsStream() << func.fn_name;
+  s2e()->getWarningsStream() << "\n";
+}
+
+void UCoreMonitor::printAllThreads(S2EExecutionState* state){
+  int nr_process = parseNrProcess(state);
+  cout << "We have " << nr_process << " processes now.\n";
+  UCorePCB** processes = parseUCorePCBLinkedList(state, nr_process);
+  for(int i = 0; i < nr_process; i ++){
+    printUCorePCB(processes[i]);
+  }
+  for(int i = 0; i < nr_process; i ++){
+    delete processes[i]->name;
+  }
+  delete[] processes;
+  return;
+}
+
+void UCoreMonitor::printHelloWorld(){
+  cout << "Hello world!\n";
+}
+
+//-------------------------------------
+//         Parse   Functions
+//-------------------------------------
+
 UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
                                  uint64_t addr){
   UCorePCB* pcb = new UCorePCB();
@@ -505,77 +564,6 @@ void UCoreMonitor::parseSystemMapFile(){
   return;
 }
 
-//Printing UCorePCB
-void UCoreMonitor::printUCorePCB(UCorePCB* proc){
-  if(proc == NULL){
-    return;
-  }
-  cout << "proc->state: " << proc->state <<"\n";
-  cout << "proc->pid: " << proc->pid << "\n";
-  cout << "proc->runs: " << proc->runs << "\n";
-  cout << "proc->parent: ";
-  cout << std::hex << (proc->parentAddr) << "\n";
-  if(proc->name != NULL){
-    cout << "proc->name: " << *proc->name << "\n";
-  }
-}
-
-//Printing Stabs
-void UCoreMonitor::printUCoreStabs(){
-  s2e()->getWarningsStream() << "Start:";
-  s2e()->getWarningsStream().write_hex(m_StabStart);
-  s2e()->getWarningsStream() << "\n";
-  s2e()->getWarningsStream() << "End:";
-  s2e()->getWarningsStream().write_hex(m_StabEnd);
-  s2e()->getWarningsStream() << "\n";
-  s2e()->getWarningsStream() << "N:";
-  s2e()->getWarningsStream() << ((m_StabEnd - m_StabStart) / sizeof(UCoreStab) - 1);
-  s2e()->getWarningsStream() << "\n";
-  for(int i = 0; i < 10; i ++){
-    int index = i * 100 + 1;
-    s2e()->getWarningsStream() << "index: ";
-    s2e()->getWarningsStream() << index;
-    s2e()->getWarningsStream() << " n_strx: ";
-    s2e()->getWarningsStream() << stab_array[index].n_strx;
-    s2e()->getWarningsStream() << " n_type: ";
-    s2e()->getWarningsStream() << (uint64_t)stab_array[index].n_type;
-    s2e()->getWarningsStream() << " n_other: ";
-    s2e()->getWarningsStream() << (uint64_t)stab_array[index].n_other;
-    s2e()->getWarningsStream() << " n_desc: ";
-    s2e()->getWarningsStream() << (uint64_t)stab_array[index].n_desc;
-    s2e()->getWarningsStream() << " v_value: ";
-    s2e()->getWarningsStream().write_hex(stab_array[index].n_value);
-    s2e()->getWarningsStream() << "\n";
-  }
-  return;
-}
-
-//Print Funcs
-void UCoreMonitor::printUCoreFunc(UCoreFunc func){
-  s2e()->getWarningsStream() << "\nSource Name:";
-  s2e()->getWarningsStream() << func.src_name;
-  s2e()->getWarningsStream() << "\nFunc Entry:";
-  s2e()->getWarningsStream().write_hex(func.fn_entry);
-  s2e()->getWarningsStream() << "\nFunc Name:";
-  s2e()->getWarningsStream() << func.fn_name;
-  s2e()->getWarningsStream() << "\n";
-}
-
-//QEMU Monitor helper functions
-void UCoreMonitor::printAllThreads(S2EExecutionState* state){
-  int nr_process = parseNrProcess(state);
-  cout << "We have " << nr_process << " processes now.\n";
-  UCorePCB** processes = parseUCorePCBLinkedList(state, nr_process);
-  for(int i = 0; i < nr_process; i ++){
-    printUCorePCB(processes[i]);
-  }
-  for(int i = 0; i < nr_process; i ++){
-    delete processes[i]->name;
-  }
-  delete[] processes;
-  return;
-}
-
 uint32_t UCoreMonitor::parseNrProcess(S2EExecutionState* state){
   uint32_t ret;
   if(!state->readMemoryConcrete(m_KeNrProcess, (void*)(&ret), 4)){
@@ -601,10 +589,6 @@ UCorePCB** UCoreMonitor::parseUCorePCBLinkedList(S2EExecutionState* state,
     offset = offset + sizeof(list_pointer);
   }
   return ret;
-}
-
-void UCoreMonitor::printHelloWorld(){
-  cout << "Hello world!\n";
 }
 
 ///////////////////////////
