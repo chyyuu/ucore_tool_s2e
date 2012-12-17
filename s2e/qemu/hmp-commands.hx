@@ -64,6 +64,18 @@ ETEXI
         @findex print_threads
         Print threads of UCore.
         ETEXI
+{
+        .name   =    "print_panic_info",
+        .args_type  = "",
+        .params     = "",
+        .help       = "Print debug info when UCore panics",
+        .mhandler.cmd = hmp_print_panic_info,
+},
+        STEXI
+        @item print_panic_info
+        @findex print_panic_info
+        Print debug info when UCore panics.
+        ETEXI
 
     {
         .name       = "block_resize",

@@ -4,4 +4,7 @@
 void print_threads(void);
 void ucore_monitor_print_threads();
 
+void print_panic_info(void);
+void ucore_monitor_print_panic_info();
+
 #endif

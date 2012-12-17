@@ -38,7 +38,6 @@ namespace s2e{
       ThreadSwitchSignal onThreadSwitching;
       ThreadSignal onThreadCreating;
       ThreadSignal onThreadExiting;
-      /*-------------------*/
 
       void slotCall(S2EExecutionState* state, uint64_t pc);
       void slotRet(S2EExecutionState* state, uint64_t pc);
@@ -46,6 +45,7 @@ namespace s2e{
         return;
       }
       void printHelloWorld(void);
+      void printPanicInfo(S2EExecutionState* state);
 
     private:
       //mointor controllers
@@ -89,6 +89,8 @@ namespace s2e{
       //Indicating the first instructions
       //To get the chance of parsing STAB file
       bool first;
+      bool paniced;
+      int range;
 
       //Signal connectors
       void onPageDirectoryChange(S2EExecutionState *state,
@@ -119,7 +121,6 @@ namespace s2e{
       //print functions
       void printUCorePCB(UCorePCB* ucorePCB);
       void printUCoreFunc(UCoreFunc func);
-      void printPanicInfo(uint64_t pc);
       void notifyLoadForAllThreads(S2EExecutionState* state);
       uint64_t getKernelStart() const;
       uint64_t getKeInitThread() const;

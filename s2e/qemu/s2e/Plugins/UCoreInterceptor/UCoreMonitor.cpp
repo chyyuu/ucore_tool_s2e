@@ -69,7 +69,6 @@ void UCoreMonitor::initialize(){
 
   //Define the first running varible as true.
   first = true;
-
   //connect Signals
   if(m_MonitorFunction){
     s2e()->getCorePlugin()->onTranslateBlockEnd
@@ -81,6 +80,9 @@ void UCoreMonitor::initialize(){
       m_KeNrProcess = sMap[NR_PROCESS_SYMBOL];
       m_KePCBLinkedList = sMap[PCB_LINKED_LIST_SYMBOL];
       this->onFunctionCalling.connect(sigc::mem_fun(*this, &UCoreMonitor::slotFunctionCalling));
+    }
+    if(m_MonitorPanic){
+      paniced = false;
     }
   }
 } //Initialize
@@ -109,7 +111,7 @@ void UCoreMonitor::slotFunctionCalling(ExecutionSignal *signal,
 void UCoreMonitor::PanicMonitor(S2EExecutionState *state,
                                 uint64_t pc){
   s2e()->getWarningsStream() << "\n[UCoreMonitor]Kernel Panic!!\n";
-  printPanicInfo(pc);
+  paniced = true;
 }//PanicMonitor
 
 //Monitoring function proc_run
@@ -209,41 +211,41 @@ void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
                                   S2EExecutionState *state,
                                   TranslationBlock *tb,
                                   uint64_t pc, int jump_type){
+  /* We do not catch function return now, so these are commentted. */
   /*Added by fwl*/
-  uint64_t vpc = state->getPc();
-  /*if (vpc >= 0x00100000 && vpc <= 0x3fffffff)
-    vpc += 0xc0000000;*/
+  // uint64_t vpc = state->getPc();
 
-  if(vpc >= getKernelStart() && ((vpc & 0xf0000000) == 0xc0000000)){
-    if(jump_type == JT_RET || jump_type == JT_LRET){
-      signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotRet));
-    }
-  }
+  // if(vpc >= getKernelStart() && ((vpc & 0xf0000000) == 0xc0000000)){
+  //   if(jump_type == JT_RET || jump_type == JT_LRET){
+  //     signal->connect(sigc::mem_fun(*this, &UCoreMonitor::slotRet));
+  //   }
+  // }
 }
 
 //slot ret inst
 void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
+  /* We do not catch function return now, so these are not used. */
   if(!stabParsed){
     return;
   }
-  // uint64_t vpc = state->getPc();
-  // UCoreFunc currentFunc;
-  // if(parseUCoreFunc(vpc, &currentFunc) == 0){ //0 means success
-  //   //printUCoreFunc(currentFunc);
-  // }else{
-  //   s2e()->getWarningsStream() << "Func @ " << vpc << "can't parse!";
-  // }
+  uint64_t vpc = state->getPc();
+  UCoreFunc currentFunc;
+  if(parseUCoreFunc(vpc, &currentFunc) == 0){ //0 means success
+    //printUCoreFunc(currentFunc);
+  }else{
+    s2e()->getWarningsStream() << "Func @ " << vpc << "can't parse!";
+  }
 
-  // //added by Nuk
-  // ExecutionSignal returningSignal;
-  // onFunctionReturning.emit(&returningSignal, state,
-  //                          currentFunc.fn_name, pc);
-  // returningSignal.emit(state, pc);
+  //added by Nuk
+  ExecutionSignal returningSignal;
+  onFunctionReturning.emit(&returningSignal, state,
+                           currentFunc.fn_name, pc);
+  returningSignal.emit(state, pc);
   //added by fwl
-  //ExecutionSignal onFunctionSignal;
-  //onFunctionTransition.emit(&onFunctionSignal, state,
-  //sTable[currentFunc.fn_entry].name, pc);
-  //onFunctionSignal.emit(state, pc);
+  ExecutionSignal onFunctionSignal;
+  onFunctionTransition.emit(&onFunctionSignal, state,
+  sTable[currentFunc.fn_entry].name, pc);
+  onFunctionSignal.emit(state, pc);
 }
 
 /**************Signal Unrelated funcs********************/
@@ -279,10 +281,15 @@ bool UCoreMonitor::getCurrentStack(S2EExecutionState *s, uint64_t *base,
 //         Print   Functions
 //-------------------------------------
 
-void UCoreMonitor::printPanicInfo(uint64_t pc){
+void UCoreMonitor::printPanicInfo(S2EExecutionState* state){
+  if(!paniced){
+    cout << "I haven't encounted panic in OS.\n";
+    return;
+  }
+  uint64_t pc = state->getPc();
   UCoreFunc* func = new UCoreFunc();
   parseUCoreFunc(pc, func);
-  s2e()->getWarningsStream() << func->fn_name << "\n" ;
+  s2e()->getWarningsStream() << "Panic @:" << func->fn_name << "\n" ;
 }
 
 void UCoreMonitor::printUCorePCB(UCorePCB* proc){
@@ -529,7 +536,7 @@ void UCoreMonitor::parseKernelLd(){
   kernel_ld_stream.open(kernel_ld_file.c_str());
   if(!kernel_ld_stream){
     s2e()->getWarningsStream() << "Unable to open file"
-                               << system_map_file << ".\n";
+                               << kernel_ld_file << ".\n";
     exit(1);
   }
   char line[255];
@@ -612,4 +619,8 @@ PluginState *UCoreMonitorState::factory(Plugin *p, S2EExecutionState *state){
 
 void ucore_monitor_print_threads(void){
   ((UCoreMonitor*)g_s2e->getPlugin("UCoreMonitor"))->printAllThreads(g_s2e_state);
+}
+
+void ucore_monitor_print_panic_info(void){
+  ((UCoreMonitor*)g_s2e->getPlugin("UCoreMonitor"))->printPanicInfo(g_s2e_state);
 }

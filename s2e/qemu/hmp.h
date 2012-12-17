@@ -63,5 +63,6 @@ void hmp_migrate(Monitor *mon, const QDict *qdict);
 
 /** Customized by Nuk*/
 void hmp_print_threads(Monitor *mon, const QDict *qdict);
+void hmp_print_panic_info(Monitor *mon, const QDict *qdict);
 
 #endif
