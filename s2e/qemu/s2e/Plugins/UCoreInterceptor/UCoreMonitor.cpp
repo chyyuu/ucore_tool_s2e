@@ -83,6 +83,9 @@ void UCoreMonitor::initialize(){
     }
     if(m_MonitorPanic){
       paniced = false;
+      range = 3;
+      pcbCounter = 0;
+      pcb_array = new UCorePCB[range];
     }
   }
 } //Initialize
@@ -124,18 +127,20 @@ void UCoreMonitor::slotKmThreadSwitch(S2EExecutionState *state,
   //get current as prev
   uint64 pPCB = 0;
   if(!state->readMemoryConcrete(m_KeCurrentThread, (void*)(&pPCB), 4)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
+    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error1!\n";
     return;
   }
   UCorePCB* prev = parseUCorePCB(state, pPCB);
   //get next...
   if(!state->readMemoryConcrete(ppPCB, (void*)(&pPCB), 4)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error!\n";
+    s2e()->getWarningsStream(state) << "[ERROR]Get pPCB error2!\n";
     return;
   }
   UCorePCB* next = parseUCorePCB(state, pPCB);
   //printUCorePCB(prev);
-  //printUCorePCB(next);
+  printUCorePCB(next);
+  pcb_array[pcbCounter] = *next;
+  pcbCounter = (pcbCounter + 1) % range;
   onThreadSwitching.emit(state, prev, next, pc);
 }
 
@@ -223,8 +228,8 @@ void UCoreMonitor::onTBJumpStart (ExecutionSignal *signal,
 }
 
 //slot ret inst
+/* We do not catch function return now, so these are not used. */
 void UCoreMonitor::slotRet(S2EExecutionState *state, uint64_t pc){
-  /* We do not catch function return now, so these are not used. */
   if(!stabParsed){
     return;
   }
@@ -290,6 +295,7 @@ void UCoreMonitor::printPanicInfo(S2EExecutionState* state){
   UCoreFunc* func = new UCoreFunc();
   parseUCoreFunc(pc, func);
   s2e()->getWarningsStream() << "Panic @:" << func->fn_name << "\n" ;
+  printUCorePCB(&pcb_array[0]);
 }
 
 void UCoreMonitor::printUCorePCB(UCorePCB* proc){
@@ -340,6 +346,8 @@ void UCoreMonitor::printHelloWorld(){
 
 UCorePCB* UCoreMonitor::parseUCorePCB(S2EExecutionState *state,
                                  uint64_t addr){
+  if(addr == 0)
+    return NULL;
   UCorePCB* pcb = new UCorePCB();
   char block[PCB_SIZE];
   if(!state->readMemoryConcrete(addr, block, PCB_SIZE)){
@@ -367,7 +375,7 @@ std::string* UCoreMonitor::parseUCorePName(S2EExecutionState *state,
     return NULL;
   }
   if(!state->readMemoryConcrete(pBlock, block, PCB_NAME_LEN)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get block error!\n";
+    s2e()->getWarningsStream(state) << "[ERROR]Get block error1!\n";
     return NULL;
   }
   std::string* result = new std::string(block);
@@ -376,10 +384,12 @@ std::string* UCoreMonitor::parseUCorePName(S2EExecutionState *state,
 
 std::string* UCoreMonitor::parseUCorePNamePrint(S2EExecutionState *state,
                                    uint64_t addr){
+  if(addr == 0)
+    return NULL;
   char block[PCB_NAME_LEN];
   memset(block, 0, PCB_NAME_LEN);
   if(!state->readMemoryConcrete(addr, block, PCB_NAME_LEN)){
-    s2e()->getWarningsStream(state) << "[ERROR]Get block error!\n";
+    s2e()->getWarningsStream(state) << "[ERROR]Get block error2!\n";
     return NULL;
   }
   std::string* result = new std::string(block);
@@ -593,7 +603,13 @@ UCorePCB** UCoreMonitor::parseUCorePCBLinkedList(S2EExecutionState* state,
     uint32_t pcb_pointer = list_pointer - PCB_LIST_LINK_OFFSET;
     ret[i] = parseUCorePCB(state, pcb_pointer);
     ret[i]->name = parseUCorePNamePrint(state, pcb_pointer + PCB_NAME_OFFSET);
-    offset = offset + sizeof(list_pointer);
+    offset = offset + LIST_NEXT_OFFSET;
+    uint32_t next_offset;
+    if(!state->readMemoryConcrete(offset, (void*)(&next_offset), sizeof(next_offset))){
+      s2e()->getWarningsStream(state) << "[ERROR]Get next offset error!\n";
+      exit(-1);
+    }
+    offset = next_offset;
   }
   return ret;
 }

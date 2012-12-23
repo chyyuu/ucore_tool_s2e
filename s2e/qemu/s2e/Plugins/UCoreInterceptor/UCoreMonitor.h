@@ -48,10 +48,11 @@ namespace s2e{
       void printPanicInfo(S2EExecutionState* state);
 
     private:
-      //mointor controllers
+      //Configs
       bool m_MonitorThreads;
       bool m_MonitorFunction;
       bool m_MonitorPanic;
+      std::string m_MonitorFuncName;
 
       //Symbol table
       typedef struct __symbol_struct{
@@ -62,12 +63,14 @@ namespace s2e{
       typedef std::map<uint64_t, symbol_struct> SymbolTable;
       typedef std::map<std::string, uint64_t> SymbolMap;
 
+      //External file name
       std::string system_map_file;
       std::string kernel_ld_file;
 
       //UCore System Map
       SymbolMap sMap;
       SymbolTable sTable;
+
       //Stab Array
       UCoreStab* stab_array;
       UCoreStab* stab_array_end;
@@ -79,6 +82,7 @@ namespace s2e{
       uint64_t m_KeCurrentThread;
       uint64_t m_KeNrProcess;
       uint64_t m_KePCBLinkedList;
+
       //STAB Related Address
       uint64_t m_StabStart;
       uint64_t m_StabEnd;
@@ -91,6 +95,8 @@ namespace s2e{
       bool first;
       bool paniced;
       int range;
+      UCorePCB* pcb_array;
+      int pcbCounter;
 
       //Signal connectors
       void onPageDirectoryChange(S2EExecutionState *state,
