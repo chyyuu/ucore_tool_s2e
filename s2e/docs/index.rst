@@ -19,12 +19,12 @@ S²E Documentation
   5. `Testing Linux binaries <Howtos/init_env.html>`_
   6. `Analyzing large programs using concolic execution <Howtos/Concolic.html>`_
   7. `Equivalence testing <EquivalenceTesting.html>`_
-  
+
 * Analyzing Windows Device Drivers
 
   1. `Step-by-step tutorial <Windows/DriverTutorial.html>`_
-  2. `Setting up the checked build of Windows <Windows/CheckedBuild.html>`_  
-  
+  2. `Setting up the checked build of Windows <Windows/CheckedBuild.html>`_
+
 * Analyzing the Linux Kernel
 
   1. `Building the Linux kernel <BuildingLinux.html>`_
@@ -38,16 +38,16 @@ S²E Documentation
   4. `How to debug guest code? <Howtos/Debugging.html>`_
 
 * S2E Tools
-  
+
   1. Available Tools
-     
+
      1. `Fork profiler <Tools/ForkProfiler.html>`_
      2. `Translation block printer <Tools/TbPrinter.html>`_
      3. `Execution profiler <Tools/ExecutionProfiler.html>`_
      4. `Coverage generator <Tools/CoverageGenerator.html>`_
-   
+
   2. `Supported debug information <Tools/DebugInfo.html>`_
-  
+
 * `Frequently Asked Questions <FAQ.html>`_
 
 S²E Plugin Reference
@@ -131,4 +131,3 @@ S²E Publications
 * `Selective Symbolic Execution <http://dslab.epfl.ch/pubs/selsymbex>`_. Vitaly
   Chipounov, Vlad Georgescu, Cristian Zamfir, George Candea. Proc. 5th Workshop
   on Hot Topics in System Dependability, Lisbon, Portugal, June 2009
-

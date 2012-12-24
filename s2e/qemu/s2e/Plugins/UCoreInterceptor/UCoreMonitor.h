@@ -146,8 +146,6 @@ namespace s2e{
                               uint64_t addr);
       std::string* parseUCorePName(S2EExecutionState *state,
                                   uint64_t addr);
-      std::string* parseUCorePNamePrint(S2EExecutionState *state,
-                                  uint64_t addr);
 
       uint64_t getCurrentThread(S2EExecutionState *state);
       bool getImports(S2EExecutionState *s,
