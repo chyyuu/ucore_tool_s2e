@@ -1,7 +1,6 @@
 #ifndef _UCORE_MONITOR_H
 #define _UCORE_MONITOR_H
 
-
 #include "UCoreStab.h"
 #include "UCorePCB.h"
 #include "UCoreFunc.h"
@@ -25,29 +24,37 @@ namespace s2e{
       UCoreMonitor(S2E *s2e) :OSMonitor(s2e){}
       virtual ~UCoreMonitor();
       void initialize();
+
       /*-------------signals------------------*/
+
       /* For funtion monitor */
-      typedef sigc::signal<void, ExecutionSignal *, S2EExecutionState*, std::string, uint64_t> TransitionSignal;
+      typedef sigc::signal<void, ExecutionSignal *,
+                           S2EExecutionState*,
+                           std::string, uint64_t> TransitionSignal;
       TransitionSignal onFunctionTransition;
       TransitionSignal onFunctionCalling;
       TransitionSignal onFunctionReturning;
 
       /* for thread monitor */
-      typedef sigc::signal<void, S2EExecutionState*, UCorePCB*, UCorePCB*, uint64_t> ThreadSwitchSignal;
-      typedef sigc::signal<void, S2EExecutionState*, UCorePCB*, uint64_t> ThreadSignal;
+      typedef sigc::signal<void, S2EExecutionState*,
+                           UCorePCB*, UCorePCB*,
+                           uint64_t> ThreadSwitchSignal;
+      typedef sigc::signal<void, S2EExecutionState*,
+                           UCorePCB*, uint64_t> ThreadSignal;
       ThreadSwitchSignal onThreadSwitching;
       ThreadSignal onThreadCreating;
       ThreadSignal onThreadExiting;
 
       void slotCall(S2EExecutionState* state, uint64_t pc);
       void slotRet(S2EExecutionState* state, uint64_t pc);
+
       void disconnect(S2EExecutionState *state){
         return;
       }
       void printHelloWorld(void);
       void printPanicInfo(S2EExecutionState* state);
 
-    private:
+    public:
       //Configs
       bool m_MonitorThreads;
       bool m_MonitorFunction;
@@ -77,12 +84,6 @@ namespace s2e{
       char* stabstr_array;
       char* stabstr_array_end;
 
-      //Kernel Addresses
-      uint64_t m_KernelBase;
-      uint64_t m_KeCurrentThread;
-      uint64_t m_KeNrProcess;
-      uint64_t m_KePCBLinkedList;
-
       //STAB Related Address
       uint64_t m_StabStart;
       uint64_t m_StabEnd;
@@ -90,8 +91,13 @@ namespace s2e{
       uint64_t m_StabStrEnd;
       bool stabParsed;
 
-      //Indicating the first instructions
-      //To get the chance of parsing STAB file
+      //Kernel Addresses
+      uint64_t m_KernelBase;
+      uint64_t m_KeCurrentThread;
+      uint64_t m_KeNrProcess;
+      uint64_t m_KePCBLinkedList;
+
+      //meta variables
       bool first;
       bool paniced;
       int range;
@@ -117,8 +123,6 @@ namespace s2e{
       void slotKmThreadSwitch(S2EExecutionState *state, uint64_t pc);
       void PanicMonitor(S2EExecutionState *state,
                         uint64_t pc);
-
-      // Meta functions starts here
 
       // parse origin files
       void parseSystemMapFile();
@@ -158,6 +162,7 @@ namespace s2e{
                            uint64_t *base,
                            uint64_t *size);
       bool isKernelAddress(uint64_t pc) const;
+
     public:
       void printAllThreads(S2EExecutionState* state);
       uint32_t parseNrProcess(S2EExecutionState* state);

@@ -54,6 +54,7 @@ void UCoreMonitor::initialize(){
     exit(-1);
   }
   parseKernelLd();
+  //Ugly hard code
   m_KernelBase = 0xc0100000;
 
   //Get STAB section address
