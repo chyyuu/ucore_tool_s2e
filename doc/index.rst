@@ -13,13 +13,13 @@ Online Reference
 
 * Web Page Reference
 
-1. `Official S2E Documentation<https://s2e.epfl.ch/embedded/s2e/>`_
-2. `Nuk's Wiki Page in OS Course, 2012<http://os.cs.tsinghua.edu.cn/oscourse/OS2012/projects/U03>`_
+1. `Official S2E Documentation <https://s2e.epfl.ch/embedded/s2e/>`_
+2. `Nuk's Wiki Page in OS Course, 2012 <http://os.cs.tsinghua.edu.cn/oscourse/OS2012/projects/U03>`_
 
 * Source Code
 
-1. `Project UCore Tool S2E<https://github.com/chyyuu/ucore_tool_s2e>`_
-2. `S2E Version1.2<https://s2e.epfl.ch/attachments/download/209/s2e-source-1.2-27.04.2012.tar.bz2>`_
+1. `Project UCore Tool S2E <https://github.com/chyyuu/ucore_tool_s2e>`_
+2. `S2E Version1.2 <https://s2e.epfl.ch/attachments/download/209/s2e-source-1.2-27.04.2012.tar.bz2>`_
 
 Plugin Reference
 ================
@@ -27,7 +27,7 @@ Plugin Reference
 UCoreMonitor
 ----------------
 
-`UCoreMonitor<UCoreMonitor.html>`_ is the basic plugin monitoring the behaviour of UCore OS.
+`UCoreMonitor <UCoreMonitor.html>`_ is the basic plugin monitoring the behaviour of UCore OS.
 
 It has the following functionalities.
 
@@ -40,7 +40,7 @@ It has the following functionalities.
 UCoreMemoryManagement
 ---------------------
 
-`UCoreMemoryManagement<UCoreMemoryManagement.html>`_ is a plugin monitoring the UCore memory usage. It needs UCoreMonitor to work.
+`UCoreMemoryManagement <UCoreMemoryManagement.html>`_ is a plugin monitoring the UCore memory usage. It needs UCoreMonitor to work.
 
 It has the following functionalities.
 
@@ -48,7 +48,7 @@ It has the following functionalities.
 UCoreFunctionMonitor
 --------------------
 
-`UCoreFunctionMonitor<UCoreFunctionMonitor.html>`_ is another plugin works based on the UCoreMonitor. It needs UCoreMonitor to work.
+`UCoreFunctionMonitor <UCoreFunctionMonitor.html>`_ is another plugin works based on the UCoreMonitor. It needs UCoreMonitor to work.
 
 It has the following functionalities.
 
