@@ -507,9 +507,10 @@ s2eobj-y += s2e/Plugins/StackChecker.o
 s2eobj-y += s2e/Plugins/ExecutionStatisticsCollector.o
 
 #######################
-s2eobj-y += s2e/Plugins/UCoreInterceptor/UCoreMonitor.o
-s2eobj-y += s2e/Plugins/UCoreInterceptor/QEMUMonitorPrint.o
+# By Nuk
 s2eobj-y += s2e/Plugins/UCoreInterceptor/UCoreFunctionMonitor.o
+#s2eobj-y += s2e/Plugins/UCoreInterceptor/QEMUMonitorPrint.o
+#s2eobj-y += s2e/Plugins/UCoreInterceptor/UCoreFunctionMonitor.o
 #s2eobj-y += s2e/Plugins/UCoreInterceptor/UCoreMemoryManagement.o
 #######################
 

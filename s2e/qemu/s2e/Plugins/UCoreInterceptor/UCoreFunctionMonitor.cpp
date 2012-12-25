@@ -1,14 +1,10 @@
-/**
-   UCore Function Monitor
-   Monitor function calling behaviour in UCore
-   By Nuk, Tsinghua University
- */
 extern "C" {
 #include "config.h"
 #include "qemu-common.h"
 }
 
 #include "UCoreFunctionMonitor.h"
+
 #include <s2e/S2E.h>
 #include <s2e/ConfigFile.h>
 #include <s2e/Utils.h>
@@ -18,47 +14,44 @@ using namespace s2e;
 using namespace s2e::plugins;
 
 S2E_DEFINE_PLUGIN(UCoreFunctionMonitor,
-                  "Monitor of Functions in UCore OS",
-                  "UCoreFunctionMonitor", "UCoreMonitor");
+                  "Monitoring Function Calling of UCore",
+                  "", "FunctionMonitor");
 
 UCoreFunctionMonitor::~UCoreFunctionMonitor(){
 }
 
 void UCoreFunctionMonitor::initialize(){
-  first = true;
-  m_MonitorFuncName = s2e()->getConfig()
-    ->getString(getConfigKey() +
-                ".FunctionName");
-  ((UCoreMonitor*)s2e()->getPlugin("UCoreMonitor"))
-    ->onFunctionCalling.connect(sigc::mem_fun(*this,
-                                              &UCoreFunctionMonitor::
-                                              slotFuncCalling));
+  m_registered = false;
+  m_monitor = static_cast<FunctionMonitor*>
+    (s2e()->getPlugin("FunctionMonitor"));
+  s2e()->getCorePlugin()
+    ->onTranslateBlockStart.connect
+    (sigc::mem_fun(*this, &UCoreFunctionMonitor::slotTBStart));
 }
 
-void UCoreFunctionMonitor::slotFuncCalling(ExecutionSignal* executionSignal,
-                                           S2EExecutionState* state,
-                                           string funcName, uint64_t pc)
-{
-  if(funcName == m_MonitorFuncName){
-    executionSignal->connect(sigc::mem_fun(*this,
-                                          &UCoreFunctionMonitor::
-                                          slotFunctionExecution));
+void UCoreFunctionMonitor::slotTBStart(ExecutionSignal *sig,
+                                       S2EExecutionState *state,
+                                       TranslationBlock *tb,
+                                       uint64_t pc){
+  if(!m_registered){
+    m_registered = true;
+    return;
   }
+  FunctionMonitor::CallSignal *callSignal;
+  callSignal = m_monitor->getCallSignal(state, -1, -1);
+  callSignal
+    ->connect(sigc::mem_fun(*this,
+                            &UCoreFunctionMonitor::FunCallMonitor));
 }
 
-void UCoreFunctionMonitor::slotFunctionExecution(S2EExecutionState *state,
-                                                 uint64_t pc)
-{
-  if(first){
-    UCoreFunc* func = new UCoreFunc;
-    ((UCoreMonitor*)s2e()->getPlugin("UCoreMonitor"))
-      ->parseUCoreFunc(pc, func);
-    first = false;
-  }
-  s2e()->getWarningsStream() << "I'm here.\n";
+void UCoreFunctionMonitor::FunCallMonitor(S2EExecutionState *state,
+                                          FunctionMonitorState *fns){
+  onFunCall.emit(state, state->getPc());
+  FUNCMON_REGISTER_RETURN(state, fns,
+                          UCoreFunctionMonitor::FunRetMonitor);
 }
 
-void UCoreFunctionMonitor::printCallDetail()
-{
+void UCoreFunctionMonitor::FunRetMonitor(S2EExecutionState *state){
+  onFunRet.emit(state, state->getPc());
 }
 

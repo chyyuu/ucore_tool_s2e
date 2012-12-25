@@ -935,11 +935,11 @@ void hmp_migrate(Monitor *mon, const QDict *qdict)
     }
 }
 /* Custom functions added by Nuk */
-extern void print_threads();
+/* extern void print_threads(); */
 void hmp_print_threads(Monitor *mon, const QDict *qdict){
-  print_threads();
+  /* print_threads(); */
 }
-extern void print_panic_info();
+/* extern void print_panic_info(); */
 void hmp_print_panic_info(Monitor *mon, const QDict *qdict){
-  print_panic_info();
+  /* print_panic_info(); */
 }
