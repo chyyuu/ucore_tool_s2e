@@ -59,7 +59,7 @@ public:
     typedef sigc::signal<void, S2EExecutionState*, FunctionMonitorState*> CallSignal;
 
     void initialize();
-    
+
     CallSignal* getCallSignal(
             S2EExecutionState *state,
             uint64_t eip, uint64_t cr3 = 0);

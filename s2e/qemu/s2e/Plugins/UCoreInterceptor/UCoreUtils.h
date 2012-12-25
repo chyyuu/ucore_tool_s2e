@@ -1,9 +1,10 @@
 #ifndef _UCORE_UTILS_H
 #define _UCORE_UTILS_H
 
+#include "UCoreStruct.h"
+
 #include <s2e/Plugin.h>
 #include <s2e/Plugins/CorePlugin.h>
-#include <s2e/Plugins/FunctionMonitor.h>
 #include <s2e/S2EExecutionState.h>
 
 #include <map>
@@ -12,6 +13,7 @@ using namespace std;
 
 namespace s2e{
   namespace plugins{
+
     class UCoreUtils : public Plugin{
       S2E_PLUGIN
       public:

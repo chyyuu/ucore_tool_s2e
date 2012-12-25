@@ -15,10 +15,11 @@ namespace s2e{
 
     S2E_DEFINE_PLUGIN(UCoreUtils, "Utils For UCore Plugins", "",);
 
+    UCoreUtils::~UCoreUtils(){
+    }
+
     void UCoreUtils::initialize(){
-
-      first = false;
-
+      first = true;
       bool ok;
       system_map_file = s2e()
         ->getConfig()->getString(getConfigKey() + ".system_map_file",
@@ -36,7 +37,7 @@ namespace s2e{
       if(!system_map_stream){
         s2e()->getWarningsStream() << "Unable to open System.map file"
                                    << system_map_file << ".\n";
-        exit(1);
+        exit(-1);
       }
 
       char line[255];

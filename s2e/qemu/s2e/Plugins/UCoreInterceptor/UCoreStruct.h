@@ -87,7 +87,6 @@ namespace s2e{
     uint16_t line_num;
   } UCoreInst;
 
-
 }
 
 #endif

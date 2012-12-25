@@ -19,8 +19,16 @@ namespace s2e{
       typedef sigc::signal<void, S2EExecutionState*,
                            uint64_t> FunMonSignal;
       FunMonSignal onFunCall;
-      FunMonSignal onFunRet;
+      FunMonSignal onFunCallSlowMode;
+      FunMonSignal onFunRetSlowMode;
     private:
+      /*-------------- Default Mode -------------*/
+      void slotTBEnd(ExecutionSignal* signal, S2EExecutionState *state,
+                   TranslationBlock *tb, uint64_t pc,
+                   bool, uint64_t);
+      void slotCallInst(S2EExecutionState *state,
+                        uint64_t pc);
+      /*-------------- Slow Mode ----------------*/
       void slotTBStart(ExecutionSignal *sig,
                        S2EExecutionState *state,
                        TranslationBlock *tb,
@@ -28,8 +36,10 @@ namespace s2e{
       void FunCallMonitor(S2EExecutionState *state,
                           FunctionMonitorState *fns);
       void FunRetMonitor(S2EExecutionState *state);
+      bool m_SlowMode;
       bool m_registered;
       FunctionMonitor *m_monitor;
+
     }; //class UCFM
   } // plugins
 } // s2e
