@@ -2,6 +2,7 @@
 #define _UCORE_UTILS_H
 
 #include "UCoreStruct.h"
+#include "UCoreFunctionMonitor.h"
 
 #include <s2e/Plugin.h>
 #include <s2e/Plugins/CorePlugin.h>
@@ -30,6 +31,7 @@ namespace s2e{
     private:
       /* -----------------Parse Funcs------------------- */
       bool first;
+      void slotFunCall(S2EExecutionState *state, uint64_t pc);
       //System Map Related
       string system_map_file;
       void parseSymbolMap();

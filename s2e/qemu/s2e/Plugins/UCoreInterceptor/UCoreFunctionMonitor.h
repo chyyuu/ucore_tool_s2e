@@ -22,7 +22,7 @@ namespace s2e{
       FunMonSignal onFunCallSlowMode;
       FunMonSignal onFunRetSlowMode;
     private:
-      /*-------------- Default Mode -------------*/
+      /*-------------- Fast Mode -------------*/
       void slotTBEnd(ExecutionSignal* signal, S2EExecutionState *state,
                    TranslationBlock *tb, uint64_t pc,
                    bool, uint64_t);

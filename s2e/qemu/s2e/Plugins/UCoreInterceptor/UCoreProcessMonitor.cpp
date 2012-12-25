@@ -25,6 +25,8 @@ UCoreProcessMonitor::~UCoreProcessMonitor(){
 
 void UCoreProcessMonitor::initialize(){
   utils = (UCoreUtils *)s2e()->getPlugin("UCoreUtils");
+  //Hard code name of global variable
+  current = utils->Addr2Sym["current"];
   ((UCoreFunctionMonitor *)s2e()->getPlugin("UCoreFunctionMonitor"))
     ->onFunCall
     .connect(sigc::mem_fun(*this, &UCoreProcessMonitor::slotFunCall));
@@ -40,9 +42,23 @@ void UCoreProcessMonitor::slotFunCall(S2EExecutionState *state, uint64_t pc){
   }else{
     string name = utils->Addr2Sym[vpc];
     if(name == "set_proc_name"){
-    }else if(name == ""){
-    }else if(name == ""){
+      slotProcInit(state);
+    }else if(name == "proc_run"){
+      slotProcSwitch(state);
+    }else if(name == "do_exit"){
+      slotProcExit(state);
     }
   }
 }
 
+void UCoreProcessMonitor::slotProcInit(S2EExecutionState *state){
+  int pc = state->getPc();
+}
+
+void UCoreProcessMonitor::slotProcSwitch(S2EExecutionState *state){
+  int pc = state->getPc();
+}
+
+void UCoreProcessMonitor::slotProcExit(S2EExecutionState *state){
+  int pc = state->getPc();
+}

@@ -20,17 +20,14 @@ namespace s2e{
       typedef sigc::signal<void, S2EExecutionState*,
                            UCorePCB*, UCorePCB*,
                            uint64_t> ThreadSwitchSignal;
-      typedef sigc::signal<void, S2EExecutionState*,
-                           UCorePCB*, uint64_t> ThreadSignal;
       ThreadSwitchSignal onThreadSwitching;
-      ThreadSignal onThreadCreating;
-      ThreadSignal onThreadExiting;
-      void slotFunCall(S2EExecutionState *state, uint64_t pc);
 
     private:
-      void slotProcInit();
-      void slotProcSwitch();
-      void slotProcExit();
+      void slotFunCall(S2EExecutionState *state, uint64_t pc);
+      void slotProcInit(S2EExecutionState *state);
+      void slotProcSwitch(S2EExecutionState *state);
+      void slotProcExit(S2EExecutionState *state);
+      uint64_t current;
       UCoreUtils* utils;
     };
   }

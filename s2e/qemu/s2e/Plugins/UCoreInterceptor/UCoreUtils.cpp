@@ -13,7 +13,7 @@ extern "C" {
 namespace s2e{
   namespace plugins{
 
-    S2E_DEFINE_PLUGIN(UCoreUtils, "Utils For UCore Plugins", "",);
+    S2E_DEFINE_PLUGIN(UCoreUtils, "Utils For UCore Plugins", "","UCoreFunctionMonitor");
 
     UCoreUtils::~UCoreUtils(){
     }
@@ -29,6 +29,7 @@ namespace s2e{
         exit(-1);
       }
       parseSymbolMap();
+
     }
 
     void UCoreUtils::parseSymbolMap(){
