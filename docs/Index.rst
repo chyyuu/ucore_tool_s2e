@@ -27,7 +27,7 @@ Plugin Documentation
 UCoreFunctionMonitor
 --------------------
 
-`UCoreFunctionMonitor <UCoreMonitor.rst>`_ is the basic plugin monitoring the Function of UCore OS.
+`UCoreFunctionMonitor <UCoreFunctionMonitor.rst>`_ is the basic plugin monitoring the Function of UCore OS.
 
 It has the following functionalities.
 

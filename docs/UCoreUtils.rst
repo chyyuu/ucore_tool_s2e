@@ -52,7 +52,22 @@ In S2E, we can also parse the Stabs Segment. Firstly we have to read this segmen
 Parse UCorePCB
 --------------
 
-It is a little complex this time.
+It is a little complex this time, I will discuss different situations.
+
+1. Process Init
+
+The address of the target PCB can be found in the argument of the target function *set_proc_name*.
+Get the address, then parse the PCB according to the PCB_SIZE and field offsets provided by the UCoreUtils.
+
+2. Process Switch
+
+We need to parse two UCorePCB this time, the previous PCB and the next PCB, respectively.
+For the previous UCorePCB, read the address from the global variable *current* and parse the UCorePCB.
+For the next UCorePCB, read the address from the argument.
+
+3. Process Exit
+
+We can still use *current* variable to parse UCorePCB because we always track the call of the *do_exit* function.
 
 Parse UCoreInst
 ---------------
