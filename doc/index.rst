@@ -50,7 +50,7 @@ It has the following functionalities.
 UCoreStruct
 -----------
 
-`UCoreStruct <UCoreStruct.rst>`_ is the abstract layer of UCore data structures in S2E.
+`UCoreStruct <UCoreUtils.rst>`_ is the abstract layer of UCore data structures in S2E.
 
 It defines the following data structures.
 
